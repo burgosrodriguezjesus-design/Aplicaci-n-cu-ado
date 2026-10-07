@@ -1,5 +1,5 @@
-// Datos iniciales: artículos básicos o un negocio de ejemplo completo para probar la aplicación.
-import { all, get, insert, run } from './db.js';
+// Datos de ejemplo SOLO para las pruebas automáticas (la aplicación nunca los carga).
+import { all, get, insert, run } from '../db/db.js';
 import { addDays, addMonths, today } from '../lib/clock.js';
 import { adjustStock, createItem } from '../services/inventory.js';
 import { saveProduct, saveRecipe } from '../services/catalogCrud.js';

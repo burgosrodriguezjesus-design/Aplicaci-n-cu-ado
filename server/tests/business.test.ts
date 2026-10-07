@@ -253,7 +253,10 @@ describe('pastelerías separadas, sin usuario ni contraseña', () => {
     await admin.post('/api/customers').send({ name: 'Cliente de Ana' }).expect(200);
     const other = await newBakery(app, { name: 'Otra pastelería' });
     expect((await other.get('/api/auth/status')).body.business_name).toBe('Otra pastelería');
+    // Empieza vacía: sin clientes, pedidos ni inventario de ejemplo
     expect((await other.get('/api/customers').expect(200)).body).toHaveLength(0);
+    expect((await other.get('/api/inventory').expect(200)).body).toHaveLength(0);
+    expect((await other.get('/api/orders?view=upcoming').expect(200)).body).toHaveLength(0);
     await other.post('/api/customers').send({ name: 'Cliente de Luis' }).expect(200);
     expect((await admin.get('/api/customers')).body.map((c: any) => c.name)).toEqual(['Cliente de Ana']);
     // Tiene todo permitido en su pastelería
@@ -301,14 +304,14 @@ describe('panel, recordatorios y buscador (datos de ejemplo)', () => {
 });
 
 describe('empezar de cero', () => {
-  it('borra todo, deja la pastelería vacía y una copia restaurable', async () => {
+  it('borra todo, deja la pastelería vacía (sin ejemplos) y una copia restaurable', async () => {
     const { admin } = await freshApp({ demo: true });
     await admin.post('/api/reset').send({ confirm: 'NO' }).expect(400);
     await admin.post('/api/reset').send({ confirm: 'BORRAR' }).expect(200);
     const status = (await admin.get('/api/auth/status').expect(200)).body;
     expect(status.has_bakery).toBe(true);
     expect(status.business_name).toBe('Dulce Test');
-    expect((await admin.get('/api/inventory').expect(200)).body.length).toBeGreaterThan(0);
+    expect((await admin.get('/api/inventory').expect(200)).body).toHaveLength(0);
     expect((await all('SELECT kind FROM backups')).map((b) => b.kind)).toEqual(['antes-de-borrar']);
     expect((await all('SELECT COUNT(*) AS n FROM orders'))[0].n).toBe(0);
   });

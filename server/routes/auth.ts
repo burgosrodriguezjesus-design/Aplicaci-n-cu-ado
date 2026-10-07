@@ -6,7 +6,6 @@ import { createTenant, insert, tenantByKey } from '../db/db.js';
 import { COOKIE, h, permissions, requireAuth, setKeyCookie } from '../http.js';
 import { HttpError } from '../lib/util.js';
 import { getSettings, saveSettings } from '../services/settings.js';
-import { seedDemo, seedBasics } from '../db/seed.js';
 import { visibleSettings } from './core.js';
 
 export const authRouter = Router();
@@ -38,7 +37,6 @@ authRouter.get(
 const createSchema = z.object({
   business_name: z.string().trim().min(1, 'Escribe el nombre de tu pastelería').max(100),
   name: z.string().trim().max(100).optional(),
-  demo: z.boolean().default(false),
 });
 
 authRouter.post(
@@ -47,10 +45,8 @@ authRouter.post(
     const input = createSchema.parse(req.body);
     limit(`create|${req.ip}`, 10, 60);
     const t = await createTenant(input.business_name, async () => {
-      const userId = await insert('users', { name: input.name || 'Yo', username: 'yo', password_hash: '-', role: 'admin', active: 1 });
+      await insert('users', { name: input.name || 'Yo', username: 'yo', password_hash: '-', role: 'admin', active: 1 });
       await saveSettings({ business_name: input.business_name });
-      if (input.demo) await seedDemo(userId);
-      else await seedBasics();
     });
     setKeyCookie(req, res, t.token);
     return { ok: true };

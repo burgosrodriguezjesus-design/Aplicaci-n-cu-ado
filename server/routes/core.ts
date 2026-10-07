@@ -5,7 +5,6 @@ import { can, h, permissions, requireAdmin } from '../http.js';
 import { addDays, today } from '../lib/clock.js';
 import { badRequest, notFound, toId } from '../lib/util.js';
 import { getSettings, saveSettings } from '../services/settings.js';
-import { seedBasics } from '../db/seed.js';
 import { getDashboard, getReminders, search } from '../services/dashboard.js';
 import { runAutomations } from '../services/orders.js';
 import { backupData, createBackup, exportData, listBackups, resetAll, restoreData } from '../services/backup.js';
@@ -242,7 +241,6 @@ coreRouter.post(
     await resetAll({ keepBackups: input.keep_backups });
     await insert('users', { name: req.user!.name, username: 'yo', password_hash: '-', role: 'admin', active: 1 });
     await saveSettings({ business_name });
-    await seedBasics();
   }),
 );
 
