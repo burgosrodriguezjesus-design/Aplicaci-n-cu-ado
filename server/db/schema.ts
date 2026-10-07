@@ -355,6 +355,33 @@ export const MIGRATIONS: string[] = [
   ALTER FUNCTION norm(text) SET search_path = pg_catalog;
   ALTER FUNCTION digits(text) SET search_path = pg_catalog;
   `,
+  /* 3: la aplicación ya no tiene datos de ejemplo. Se vacían las pastelerías que solo tienen
+        los de ejemplo (se crean todos a la vez al crear la pastelería): si alguien ha añadido
+        algo suyo más tarde, no se toca nada. Se conservan el nombre y la configuración. */ `
+  DO $m$
+  DECLARE
+    start timestamptz;
+    later timestamptz;
+  BEGIN
+    -- Hora en que se crearon los ejemplos (la de la clienta de ejemplo).
+    SELECT MIN(created_at)::timestamptz INTO start FROM customers WHERE name = 'Marta García' AND digits(phone) = '612345678';
+    later := start + interval '10 minutes';
+    IF start IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM orders WHERE created_at::timestamptz > later)
+      AND NOT EXISTS (SELECT 1 FROM customers WHERE created_at::timestamptz > later)
+      AND NOT EXISTS (SELECT 1 FROM products WHERE created_at::timestamptz > later)
+      AND NOT EXISTS (SELECT 1 FROM recipes WHERE created_at::timestamptz > later)
+      AND NOT EXISTS (SELECT 1 FROM inventory_items WHERE created_at::timestamptz > later)
+      AND NOT EXISTS (SELECT 1 FROM expenses WHERE created_at::timestamptz > later)
+      AND NOT EXISTS (SELECT 1 FROM payments WHERE created_at::timestamptz > later)
+    THEN
+      TRUNCATE customers, inventory_items, recipes, recipe_ingredients, products, product_sizes, product_components,
+        quotes, orders, order_items, quote_items, order_images, payments, expenses, inventory_movements,
+        production_tasks, shopping_extras, shopping_checks, reminders, images, backups RESTART IDENTITY CASCADE;
+    END IF;
+  END
+  $m$;
+  `,
 ];
 
 /** Tablas con datos del negocio, en orden de dependencias (para copias y restauración). */

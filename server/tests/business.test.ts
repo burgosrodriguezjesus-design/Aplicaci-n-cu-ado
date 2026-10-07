@@ -384,3 +384,31 @@ describe('instalación anterior (con usuario y contraseña)', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe('quitar los datos de ejemplo (migración 3)', () => {
+  it('vacía las pastelerías que solo tienen ejemplos y no toca las que tienen algo suyo', async () => {
+    const { exec } = await import('../db/db.js');
+    const { MIGRATIONS } = await import('../db/schema.js');
+    // Solo ejemplos → se vacía (y sus copias), conservando nombre y persona
+    const demo = await freshApp({ demo: true });
+    await demo.admin.post('/api/backups').expect(200);
+    await exec(MIGRATIONS[2]);
+    expect((await all('SELECT COUNT(*) AS n FROM orders'))[0].n).toBe(0);
+    expect((await all('SELECT COUNT(*) AS n FROM customers'))[0].n).toBe(0);
+    expect((await all('SELECT COUNT(*) AS n FROM inventory_items'))[0].n).toBe(0);
+    expect((await all('SELECT COUNT(*) AS n FROM backups'))[0].n).toBe(0);
+    expect((await demo.admin.get('/api/auth/status')).body.business_name).toBe('Dulce Test');
+    await demo.admin.get('/api/dashboard').expect(200);
+
+    // Ejemplos + un cliente propio añadido más tarde → no se toca nada
+    const mixed = await freshApp({ demo: true });
+    await mixed.admin.post('/api/customers').send({ name: 'Cliente de verdad' }).expect(200);
+    // (añadido una hora después de crear la pastelería)
+    const { run: dbRun } = await import('../db/db.js');
+    await dbRun("UPDATE customers SET created_at = to_char(now() AT TIME ZONE 'UTC' + interval '1 hour', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"') WHERE name = 'Cliente de verdad'");
+    const before = (await all('SELECT COUNT(*) AS n FROM orders'))[0].n;
+    await exec(MIGRATIONS[2]);
+    expect((await all('SELECT COUNT(*) AS n FROM orders'))[0].n).toBe(before);
+    expect(before).toBeGreaterThan(0);
+  });
+});

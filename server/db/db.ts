@@ -202,6 +202,15 @@ async function setupBase() {
     const legacy = await get<{ t: string | null }>('SELECT to_regclass(?) AS t', [`${q(base)}.users`]);
     if (legacy?.t) await moveLegacy();
   });
+  // Las pastelerías con migraciones pendientes se ponen al día al arrancar (cada una en su transacción).
+  const pending = await all<Tenant>(`SELECT id, schema, version FROM ${baseTable('tenants')} WHERE version < ? ORDER BY id`, [MIGRATIONS.length]);
+  for (const t of pending) {
+    try {
+      await withTenant(t, async () => {});
+    } catch (e) {
+      console.error(`No se pudo actualizar la pastelería ${t.id}`, e);
+    }
+  }
 }
 
 /** Instalación antigua (una sola pastelería en el esquema base): se mueve a su propio esquema. */
