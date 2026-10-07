@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { all, get } from '../db/db.js';
 import { setNow } from '../lib/clock.js';
-import { employee, freshApp } from './helpers.js';
+import { freshApp, newBakery } from './helpers.js';
 
 async function catalogBasics(admin: any) {
   // Ingredientes y una receta de 10 raciones + un producto con tamaños.
@@ -242,35 +242,34 @@ describe('presupuestos', () => {
   });
 });
 
-describe('permisos', () => {
-  it('restringe finanzas, costes y configuración a los empleados', async () => {
-    const { app, admin } = await freshApp({ demo: true });
-    const emp = await employee(app, admin);
-    await emp.get('/api/finance/summary').expect(403);
-    await emp.put('/api/settings').send({ business_name: 'X' }).expect(403);
-    await emp.get('/api/users').expect(403);
-    await emp.get('/api/backups').expect(403);
-    const dash = (await emp.get('/api/dashboard').expect(200)).body;
-    expect(dash.money).toBeNull();
-    const recipes = (await emp.get('/api/recipes').expect(200)).body;
-    expect(recipes[0].cost).toBeNull();
-    await emp.get('/api/products/1/costing').expect(403);
-    // Pero puede trabajar con pedidos
-    const orders = (await emp.get('/api/orders?view=upcoming').expect(200)).body;
-    await emp.patch(`/api/orders/${orders[0].id}/status`).send({ status: 'confirmado' }).expect(200);
-    await emp.delete(`/api/orders/${orders[0].id}`).expect(403);
-    // El administrador puede abrirle las finanzas
-    await admin.put('/api/settings').send({ perm_finances: true }).expect(200);
-    await emp.get('/api/finance/summary').expect(200);
-    expect((await emp.get('/api/dashboard')).body.money).not.toBeNull();
-  });
-
-  it('pide sesión para usar la API y bloquea contraseñas incorrectas', async () => {
-    const { app } = await freshApp();
+describe('pastelerías separadas, sin usuario ni contraseña', () => {
+  it('cada dispositivo ve solo su pastelería y puede abrirla en otro con su enlace', async () => {
+    const { app, admin } = await freshApp();
     const request = (await import('supertest')).default;
+    // Sin pastelería no se puede usar la API
     await request(app).get('/api/orders').expect(401);
-    await request(app).post('/api/auth/login').send({ username: 'admin', password: 'mal' }).expect(401);
-    await request(app).post('/api/auth/setup').send({ business_name: 'x', name: 'x', username: 'otro', password: '123456' }).expect(400);
+    expect((await request(app).get('/api/auth/status').expect(200)).body.has_bakery).toBe(false);
+
+    await admin.post('/api/customers').send({ name: 'Cliente de Ana' }).expect(200);
+    const other = await newBakery(app, { name: 'Otra pastelería' });
+    expect((await other.get('/api/auth/status')).body.business_name).toBe('Otra pastelería');
+    expect((await other.get('/api/customers').expect(200)).body).toHaveLength(0);
+    await other.post('/api/customers').send({ name: 'Cliente de Luis' }).expect(200);
+    expect((await admin.get('/api/customers')).body.map((c: any) => c.name)).toEqual(['Cliente de Ana']);
+    // Tiene todo permitido en su pastelería
+    expect((await admin.get('/api/auth/me')).body.permissions.finances).toBe(true);
+    await admin.get('/api/finance/summary').expect(200);
+
+    // Enlace para otro móvil
+    const { key } = (await admin.get('/api/auth/link').expect(200)).body;
+    const phone = request.agent(app);
+    await phone.post('/api/auth/enter').send({ key: 'enlace-que-no-existe-123' }).expect(400);
+    await phone.post('/api/auth/enter').send({ key: `https://ejemplo.com/entrar#${key}` }).expect(200);
+    expect((await phone.get('/api/customers')).body.map((c: any) => c.name)).toEqual(['Cliente de Ana']);
+    // Salir en ese móvil no borra nada
+    await phone.post('/api/auth/leave').expect(200);
+    await phone.get('/api/customers').expect(401);
+    expect((await admin.get('/api/customers')).body).toHaveLength(1);
   });
 });
 
@@ -302,13 +301,14 @@ describe('panel, recordatorios y buscador (datos de ejemplo)', () => {
 });
 
 describe('empezar de cero', () => {
-  it('borra todo, vuelve a la instalación y deja una copia restaurable', async () => {
-    const { app, admin } = await freshApp({ demo: true });
+  it('borra todo, deja la pastelería vacía y una copia restaurable', async () => {
+    const { admin } = await freshApp({ demo: true });
     await admin.post('/api/reset').send({ confirm: 'NO' }).expect(400);
     await admin.post('/api/reset').send({ confirm: 'BORRAR' }).expect(200);
-    const request = (await import('supertest')).default;
-    const status = (await request(app).get('/api/auth/status').expect(200)).body;
-    expect(status.needs_setup).toBe(true);
+    const status = (await admin.get('/api/auth/status').expect(200)).body;
+    expect(status.has_bakery).toBe(true);
+    expect(status.business_name).toBe('Dulce Test');
+    expect((await admin.get('/api/inventory').expect(200)).body.length).toBeGreaterThan(0);
     expect((await all('SELECT kind FROM backups')).map((b) => b.kind)).toEqual(['antes-de-borrar']);
     expect((await all('SELECT COUNT(*) AS n FROM orders'))[0].n).toBe(0);
   });
@@ -322,7 +322,6 @@ describe('copias de seguridad', () => {
     await admin.post('/api/customers').send({ name: 'Después' }).expect(200);
     expect((await admin.get('/api/customers')).body).toHaveLength(2);
     expect((await admin.get('/api/backups')).body.map((b: any) => b.id)).toContain(id);
-    // Se restaura sin cerrar la sesión de quien lo hace
     await admin.post(`/api/backups/restore/${id}`).expect(200);
     const names = (await admin.get('/api/customers').expect(200)).body.map((c: any) => c.name);
     expect(names).toEqual(['Antes']);
@@ -336,5 +335,49 @@ describe('copias de seguridad', () => {
     await admin.post('/api/customers').send({ name: 'Otro más' }).expect(200);
     await admin.post('/api/backups/restore').set('Content-Type', 'application/gzip').send(file.body).expect(200);
     expect((await admin.get('/api/customers')).body.map((c: any) => c.name)).toEqual(['Antes']);
+  });
+});
+
+describe('instalación anterior (con usuario y contraseña)', () => {
+  it('pasa sus datos a su propia pastelería y quien tenía sesión sigue entrando', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const crypto = await import('node:crypto');
+    const { openDb, closeDb, run: dbRun, exec } = await import('../db/db.js');
+    const { MIGRATIONS } = await import('../db/schema.js');
+    const { createApp } = await import('../app.js');
+    const request = (await import('supertest')).default;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'obrador-legacy-'));
+    // Base de datos como la de antes: todas las tablas en el esquema base.
+    await openDb({ url: null, dataDir: dir });
+    await dbRun('DROP TABLE tenant_keys');
+    await dbRun('DROP TABLE tenants');
+    await exec('CREATE TABLE schema_migrations (version integer PRIMARY KEY, applied_at text NOT NULL)');
+    for (const [i, m] of MIGRATIONS.entries()) {
+      await exec(m);
+      await dbRun("INSERT INTO schema_migrations VALUES (?, 'antes')", [i + 1]);
+    }
+    await dbRun("INSERT INTO users (name, username, password_hash, role) VALUES ('Jesús', 'jesus', 'x', 'admin')");
+    await dbRun(`INSERT INTO settings (key, value) VALUES ('business_name', '"Obrador antiguo"')`);
+    await dbRun("INSERT INTO customers (name) VALUES ('Cliente antiguo')");
+    const token = 'sesion-antigua-123';
+    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    await dbRun("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, 1, '2099-01-01')", [hash]);
+    await closeDb();
+
+    await openDb({ url: null, dataDir: dir });
+    const app = createApp();
+    const old = request.agent(app);
+    const status = (await old.get('/api/auth/status').set('Cookie', `obrador_sid=${token}`).expect(200)).body;
+    expect(status.has_bakery).toBe(true);
+    expect(status.business_name).toBe('Obrador antiguo');
+    // Ya entra con la cookie nueva
+    expect((await old.get('/api/customers').expect(200)).body.map((c: any) => c.name)).toEqual(['Cliente antiguo']);
+    // Otro dispositivo sin sesión no ve nada
+    expect((await request(app).get('/api/auth/status')).body.has_bakery).toBe(false);
+    await request(app).get('/api/customers').set('Cookie', 'obrador_sid=otra').expect(401);
+    await closeDb();
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });

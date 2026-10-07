@@ -1,125 +1,92 @@
-import { Router, type Request, type Response } from 'express';
+// Acceso sin usuario ni contraseña: cada dispositivo guarda en una cookie la llave de
+// su pastelería. Con el enlace de acceso (la misma llave) se abre en otro móvil.
+import { Router } from 'express';
 import { z } from 'zod';
-import { tx } from '../db/db.js';
-import { COOKIE, h, permissions, requireAuth } from '../http.js';
-import { HttpError, badRequest } from '../lib/util.js';
-import {
-  changePassword,
-  createSession,
-  createUser,
-  login,
-  logout,
-  SESSION_DAYS,
-  usersCount,
-} from '../services/auth.js';
+import { createTenant, insert, tenantByKey } from '../db/db.js';
+import { COOKIE, h, permissions, requireAuth, setKeyCookie } from '../http.js';
+import { HttpError } from '../lib/util.js';
 import { getSettings, saveSettings } from '../services/settings.js';
 import { seedDemo, seedBasics } from '../db/seed.js';
 import { visibleSettings } from './core.js';
 
 export const authRouter = Router();
 
-function setCookie(req: Request, res: Response, token: string) {
-  res.cookie(COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: req.secure,
-    maxAge: SESSION_DAYS * 86400000,
-    path: '/',
-  });
-}
-
-// Límite sencillo de intentos de inicio de sesión (por IP + usuario).
+// Límite sencillo por IP para crear pastelerías y probar enlaces.
 const attempts = new Map<string, { n: number; until: number }>();
-function checkRate(key: string) {
+export const resetLimits = () => attempts.clear();
+function limit(key: string, max: number, minutes: number) {
+  const now = Date.now();
+  if (attempts.size > 5000) for (const [k, v] of attempts) if (v.until < now) attempts.delete(k);
   const a = attempts.get(key);
-  if (a && a.until > Date.now() && a.n >= 8) {
-    throw new HttpError(429, 'Demasiados intentos. Espera unos minutos y vuelve a probar.');
-  }
-}
-function fail(key: string) {
-  if (attempts.size > 5000) {
-    const now = Date.now();
-    for (const [k, v] of attempts) if (v.until < now) attempts.delete(k);
-  }
-  const a = attempts.get(key);
-  if (!a || a.until < Date.now()) attempts.set(key, { n: 1, until: Date.now() + 15 * 60000 });
-  else a.n++;
+  if (!a || a.until < now) attempts.set(key, { n: 1, until: now + minutes * 60000 });
+  else if (++a.n > max) throw new HttpError(429, 'Demasiados intentos. Espera unos minutos y vuelve a probar.');
 }
 
 authRouter.get(
   '/status',
-  h(async (req) => ({
-    needs_setup: (await usersCount()) === 0,
-    user: req.user ?? null,
-    business_name: getSettings().business_name,
-  })),
+  h(async (req, res) => {
+    // Se renueva la cookie para que no caduque mientras se use.
+    if (req.tenant && req.cookies?.[COOKIE]) setKeyCookie(req, res, req.cookies[COOKIE]);
+    return {
+      has_bakery: !!req.tenant,
+      user: req.user ?? null,
+      business_name: req.tenant ? getSettings().business_name : '',
+    };
+  }),
 );
 
-const setupSchema = z.object({
-  business_name: z.string().trim().min(1, 'Escribe el nombre del negocio').max(100),
-  name: z.string().trim().min(1, 'Escribe tu nombre').max(100),
-  username: z.string().trim().min(3, 'El usuario debe tener al menos 3 letras').max(50),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+const createSchema = z.object({
+  business_name: z.string().trim().min(1, 'Escribe el nombre de tu pastelería').max(100),
+  name: z.string().trim().max(100).optional(),
   demo: z.boolean().default(false),
 });
 
 authRouter.post(
-  '/setup',
+  '/create',
   h(async (req, res) => {
-    if ((await usersCount()) > 0) throw badRequest('La aplicación ya está configurada');
-    const input = setupSchema.parse(req.body);
-    const userId = await tx(async () => {
-      if ((await usersCount()) > 0) throw badRequest('La aplicación ya está configurada');
-      const id = await createUser({ name: input.name, username: input.username, password: input.password, role: 'admin' });
+    const input = createSchema.parse(req.body);
+    limit(`create|${req.ip}`, 10, 60);
+    const t = await createTenant(input.business_name, async () => {
+      const userId = await insert('users', { name: input.name || 'Yo', username: 'yo', password_hash: '-', role: 'admin', active: 1 });
       await saveSettings({ business_name: input.business_name });
-      if (input.demo) await seedDemo(id);
+      if (input.demo) await seedDemo(userId);
       else await seedBasics();
-      return id;
     });
-    setCookie(req, res, await createSession(userId));
+    setKeyCookie(req, res, t.token);
     return { ok: true };
   }),
 );
 
+/** Abrir en este dispositivo una pastelería con su enlace de acceso. */
 authRouter.post(
-  '/login',
+  '/enter',
   h(async (req, res) => {
-    const { username, password } = z
-      .object({ username: z.string().min(1, 'Escribe tu usuario'), password: z.string().min(1, 'Escribe tu contraseña') })
-      .parse(req.body);
-    const key = `${req.ip}|${username.toLowerCase()}`;
-    checkRate(key);
-    const r = await login(username, password);
-    if (!r) {
-      fail(key);
-      throw new HttpError(401, 'Usuario o contraseña incorrectos');
-    }
-    attempts.delete(key);
-    setCookie(req, res, r.token);
-    return { user: r.user };
+    const { key } = z.object({ key: z.string().trim().min(10, 'El enlace no es válido').max(200) }).parse(req.body);
+    limit(`enter|${req.ip}`, 20, 15);
+    const token = key.includes('#') ? key.slice(key.lastIndexOf('#') + 1) : key;
+    if (!(await tenantByKey(token))) throw new HttpError(400, 'Ese enlace no es válido o la pastelería ya no existe');
+    setKeyCookie(req, res, token);
+    return { ok: true };
   }),
 );
 
+/** Enlace para abrir esta pastelería en otro dispositivo. */
+authRouter.get(
+  '/link',
+  requireAuth,
+  h((req) => ({ key: req.cookies[COOKIE] })),
+);
+
+/** Dejar de usar la pastelería en este dispositivo (los datos no se borran). */
 authRouter.post(
-  '/logout',
-  h(async (req, res) => {
-    await logout(req.cookies?.[COOKIE]);
+  '/leave',
+  h((_req, res) => {
     res.clearCookie(COOKIE, { path: '/' });
-    return { ok: true };
   }),
 );
 
 authRouter.get(
   '/me',
   requireAuth,
-  h((req) => ({ user: req.user, permissions: permissions(req), settings: visibleSettings(req) })),
-);
-
-authRouter.post(
-  '/password',
-  requireAuth,
-  h(async (req) => {
-    const { current, next } = z.object({ current: z.string(), next: z.string() }).parse(req.body);
-    await changePassword(req.user!.id, current, next);
-  }),
+  h((req) => ({ user: req.user, bakery_id: req.tenant!.id, permissions: permissions(req), settings: visibleSettings(req) })),
 );

@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router';
 import { useAuth } from './lib/auth';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
-import { Login, Setup } from './pages/Login';
+import { Welcome } from './pages/Welcome';
 import { Dashboard } from './pages/Dashboard';
 import { Orders } from './pages/Orders';
 import { OrderDetail } from './pages/OrderDetail';
@@ -25,9 +25,9 @@ import { Reminders } from './pages/Reminders';
 import { SettingsPage } from './pages/Settings';
 
 export function App() {
-  const { loading, user, needsSetup, permissions } = useAuth();
+  const { loading, user, permissions } = useAuth();
   if (loading) return <Loading text="Abriendo el obrador…" />;
-  if (!user) return needsSetup ? <Setup /> : <Login />;
+  if (!user) return <Welcome />;
   return (
     <Routes>
       <Route element={<Layout />}>

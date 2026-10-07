@@ -4,8 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { errorHandler, h, loadUser, requireAuth } from './http.js';
 import { ensureDb } from './db/db.js';
-import { loadSettings } from './services/settings.js';
-import { runDaily } from './services/daily.js';
+import { runDailyAll } from './services/daily.js';
 import { authRouter } from './routes/auth.js';
 import { coreRouter } from './routes/core.js';
 import { ordersRouter } from './routes/orders.js';
@@ -32,8 +31,7 @@ export function createApp(opts: { webDir?: string } = {}) {
         return;
       }
       await ensureDb();
-      await loadSettings();
-      return runDaily();
+      return runDailyAll();
     }),
   );
 

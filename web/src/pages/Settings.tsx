@@ -1,37 +1,94 @@
 import { useEffect, useRef, useState } from 'react';
-import { DatabaseBackup, Download, KeyRound, LogOut, Pencil, RotateCcw, Upload, UserPlus } from 'lucide-react';
-import { EMPLOYEE_PERMISSIONS, type Permission, type Settings } from '@shared/constants';
+import { Copy, DatabaseBackup, Download, LogOut, RotateCcw, Share2, Upload } from 'lucide-react';
+import type { Settings } from '@shared/constants';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import type { User } from '../lib/types';
 import { useToast } from '../components/Toast';
-import { Badge, Button, Card, Field, Input, Loading, NumberInput, PageHeader, Section, Segmented, Sheet, Toggle, useConfirm } from '../components/ui';
+import { Button, Card, Field, Input, Loading, NumberInput, PageHeader, Section, Sheet, useConfirm } from '../components/ui';
 
 export function SettingsPage() {
-  const { user, logout } = useAuth();
-  const admin = user?.role === 'admin';
   return (
     <div className="space-y-6 pb-8">
       <PageHeader title="Configuración" back="/mas" />
-      {admin && <BusinessSettings />}
-      {admin && <UsersSection />}
-      {admin && <BackupSection />}
-      {admin && <ResetSection />}
-      <Section title="Mi cuenta">
-        <Card className="p-4 space-y-3">
-          <div>
-            <div className="font-extrabold">{user?.name}</div>
-            <div className="text-sm text-choco-500">
-              Usuario «{user?.username}» · {admin ? 'Administrador' : 'Empleado'}
-            </div>
-          </div>
-          <PasswordForm />
-          <Button variant="outline" block icon={<LogOut size={18} />} onClick={logout}>
-            Cerrar sesión
-          </Button>
-        </Card>
-      </Section>
+      <BusinessSettings />
+      <OtherDeviceSection />
+      <BackupSection />
+      <ResetSection />
+      <LeaveSection />
     </div>
+  );
+}
+
+/** Enlace para abrir la misma pastelería en otro móvil u ordenador. */
+function OtherDeviceSection() {
+  const toast = useToast();
+  const res = useApi<{ key: string }>('/auth/link');
+  const link = res.data ? `${window.location.origin}/entrar#${res.data.key}` : '';
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.show('Enlace copiado');
+    } catch {
+      window.prompt('Copia este enlace:', link);
+    }
+  };
+  return (
+    <Section title="Usarla en otro móvil u ordenador">
+      <Card className="p-4 space-y-3">
+        <p className="text-sm text-choco-700">
+          Cada móvil tiene su propia pastelería. Para abrir <b>esta misma</b> en otro dispositivo (o si se borran los datos del navegador), abre este
+          enlace allí. Guárdalo en un sitio seguro: <b>quien tenga el enlace puede ver y cambiar tus datos</b>.
+        </p>
+        {link ? (
+          <>
+            <div className="rounded-xl bg-cream-100 px-3 py-2.5 text-sm font-mono break-all select-all">{link}</div>
+            <div className="flex flex-wrap gap-2">
+              <Button icon={<Copy size={18} />} onClick={copy}>
+                Copiar enlace
+              </Button>
+              <Button
+                variant="secondary"
+                icon={<Share2 size={18} />}
+                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Enlace para abrir mi pastelería: ${link}`)}`, '_blank')}
+              >
+                Enviármelo por WhatsApp
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Loading />
+        )}
+      </Card>
+    </Section>
+  );
+}
+
+function LeaveSection() {
+  const { leave } = useAuth();
+  const confirm = useConfirm();
+  return (
+    <Section title="Este dispositivo">
+      <Card className="p-4 space-y-3">
+        <p className="text-sm text-choco-700">
+          Deja de usar esta pastelería en este dispositivo. Los datos <b>no se borran</b>: puedes volver a abrirla con el enlace de arriba.
+        </p>
+        <Button
+          variant="outline"
+          block
+          icon={<LogOut size={18} />}
+          onClick={async () =>
+            (await confirm({
+              title: '¿Salir en este dispositivo?',
+              text: 'Antes, guarda el enlace de acceso: sin él no podrás volver a abrir esta pastelería aquí.',
+              ok: 'Salir',
+              danger: true,
+            })) && leave()
+          }
+        >
+          Salir de esta pastelería
+        </Button>
+      </Card>
+    </Section>
   );
 }
 
@@ -75,9 +132,6 @@ function BusinessSettings() {
           <Field label="Gastos de envío por defecto">
             <NumberInput {...num('default_delivery_fee')} suffix="€" />
           </Field>
-          <Field label="Señal recomendada" hint="Botón rápido al crear un pedido.">
-            <NumberInput {...num('deposit_percent')} suffix="%" />
-          </Field>
           <Field label="Validez de los presupuestos">
             <NumberInput {...num('quote_validity_days')} integer suffix="días" />
           </Field>
@@ -98,15 +152,6 @@ function BusinessSettings() {
         </Card>
       </Section>
 
-      <Section title="Qué pueden hacer los empleados">
-        <Card className="p-4 divide-y divide-cream-200">
-          {(Object.keys(EMPLOYEE_PERMISSIONS) as Permission[]).map((p) => (
-            <Toggle key={p} checked={!!f[p]} onChange={(v) => setF({ ...f, [p]: v })} label={EMPLOYEE_PERMISSIONS[p]} />
-          ))}
-          <p className="text-sm text-choco-500 pt-3">Los empleados siempre pueden ver y actualizar pedidos, calendario, producción, clientes y la lista de la compra.</p>
-        </Card>
-      </Section>
-
       {dirty && (
         <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4 z-20">
           <Button block size="lg" loading={save.isPending} onClick={() => save.mutate()} className="shadow-[var(--shadow-float)]">
@@ -115,95 +160,6 @@ function BusinessSettings() {
         </div>
       )}
     </>
-  );
-}
-
-function UsersSection() {
-  const { user: me } = useAuth();
-  const res = useApi<(User & { active: number })[]>('/users');
-  const [editing, setEditing] = useState<(User & { active: number }) | 'new' | null>(null);
-  return (
-    <Section
-      title="Usuarios"
-      action={
-        <Button size="sm" variant="secondary" icon={<UserPlus size={16} />} onClick={() => setEditing('new')}>
-          Añadir
-        </Button>
-      }
-    >
-      <Card className="divide-y divide-cream-200">
-        {res.isLoading && <Loading />}
-        {res.data?.map((u) => (
-          <div key={u.id} className="flex items-center gap-3 px-4 py-3">
-            <div className="h-10 w-10 rounded-full bg-berry-100 text-berry-700 font-extrabold flex items-center justify-center">{u.name.charAt(0)}</div>
-            <div className="flex-1 min-w-0">
-              <div className="font-bold">
-                {u.name} {u.id === me?.id && <span className="text-choco-400 font-semibold">(tú)</span>}
-              </div>
-              <div className="text-sm text-choco-500">«{u.username}»</div>
-            </div>
-            {!u.active && <Badge tone="red">Desactivado</Badge>}
-            <Badge tone={u.role === 'admin' ? 'berry' : 'neutral'}>{u.role === 'admin' ? 'Administrador' : 'Empleado'}</Badge>
-            <button type="button" className="p-2 text-choco-500 hover:text-berry-600" aria-label="Editar usuario" onClick={() => setEditing(u)}>
-              <Pencil size={18} />
-            </button>
-          </div>
-        ))}
-      </Card>
-      {editing && <UserSheet user={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
-    </Section>
-  );
-}
-
-function UserSheet({ user, onClose }: { user?: User & { active: number }; onClose: () => void }) {
-  const confirm = useConfirm();
-  const { user: me } = useAuth();
-  const [f, setF] = useState({ name: user?.name ?? '', username: user?.username ?? '', password: '', role: user?.role ?? 'employee', active: user ? !!user.active : true });
-  const save = useAction(
-    () => {
-      const body = { ...f, password: f.password || undefined };
-      return user ? api(`/users/${user.id}`, { method: 'PUT', body }) : api('/users', { method: 'POST', body });
-    },
-    { success: user ? 'Usuario guardado' : 'Usuario creado', onSuccess: onClose },
-  );
-  const remove = useAction(() => api(`/users/${user!.id}`, { method: 'DELETE' }), { success: 'Usuario borrado', onSuccess: onClose });
-  return (
-    <Sheet
-      open
-      onClose={onClose}
-      title={user ? 'Editar usuario' : 'Nuevo usuario'}
-      footer={
-        <Button block size="lg" disabled={!f.name.trim() || !f.username.trim() || (!user && f.password.length < 6)} loading={save.isPending} onClick={() => save.mutate()}>
-          Guardar
-        </Button>
-      }
-    >
-      <div className="space-y-4">
-        <Field label="Nombre">
-          <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-        </Field>
-        <Field label="Usuario para entrar">
-          <Input value={f.username} onChange={(e) => setF({ ...f, username: e.target.value.replace(/\s/g, '') })} autoCapitalize="none" />
-        </Field>
-        <Field label={user ? 'Nueva contraseña (déjalo vacío para no cambiarla)' : 'Contraseña'} hint="Mínimo 6 caracteres.">
-          <Input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" />
-        </Field>
-        <Segmented
-          value={f.role}
-          onChange={(role) => setF({ ...f, role })}
-          options={[
-            { value: 'employee', label: 'Empleado' },
-            { value: 'admin', label: 'Administrador' },
-          ]}
-        />
-        {user && user.id !== me?.id && <Toggle checked={f.active} onChange={(active) => setF({ ...f, active })} label="Puede entrar en la aplicación" />}
-        {user && user.id !== me?.id && (
-          <Button variant="danger" block onClick={async () => (await confirm({ title: `¿Borrar a ${user.name}?`, ok: 'Borrar', danger: true })) && remove.mutate()}>
-            Borrar usuario
-          </Button>
-        )}
-      </div>
-    </Sheet>
   );
 }
 
@@ -317,8 +273,8 @@ function ResetSection() {
     <Section title="Empezar de cero">
       <Card className="p-4 space-y-3 border-red-200">
         <p className="text-sm text-choco-700">
-          Borra todos los pedidos, clientes, recetas, inventario, usuarios y demás datos (por ejemplo, para quitar los datos de ejemplo) y vuelve a la
-          pantalla de instalación. Antes se guarda una copia de seguridad que podrás restaurar después.
+          Borra todos los pedidos, clientes, recetas, inventario y demás datos (por ejemplo, para quitar los datos de ejemplo) y deja tu pastelería
+          vacía. Antes se guarda una copia de seguridad que podrás restaurar después.
         </p>
         <Button variant="danger" onClick={() => setOpen(true)}>
           Borrar todos los datos
@@ -342,41 +298,5 @@ function ResetSection() {
         </Sheet>
       )}
     </Section>
-  );
-}
-
-function PasswordForm() {
-  const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ current: '', next: '' });
-  const save = useAction(() => api('/auth/password', { method: 'POST', body: f }), {
-    success: 'Contraseña cambiada',
-    onSuccess: () => {
-      setOpen(false);
-      setF({ current: '', next: '' });
-    },
-  });
-  if (!open)
-    return (
-      <Button variant="secondary" block icon={<KeyRound size={18} />} onClick={() => setOpen(true)}>
-        Cambiar mi contraseña
-      </Button>
-    );
-  return (
-    <div className="space-y-3 rounded-xl bg-cream-50 p-3">
-      <Field label="Contraseña actual">
-        <Input type="password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} autoComplete="current-password" />
-      </Field>
-      <Field label="Nueva contraseña" hint="Mínimo 6 caracteres.">
-        <Input type="password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} autoComplete="new-password" />
-      </Field>
-      <div className="flex gap-2">
-        <Button variant="ghost" onClick={() => setOpen(false)}>
-          Cancelar
-        </Button>
-        <Button className="flex-1" disabled={!f.current || f.next.length < 6} loading={save.isPending} onClick={() => save.mutate()}>
-          Guardar
-        </Button>
-      </div>
-    </div>
   );
 }

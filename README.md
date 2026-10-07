@@ -3,7 +3,7 @@
 Aplicación completa para llevar una pequeña repostería o pastelería desde el móvil
 (y también desde el ordenador): **pedidos, calendario, producción diaria, recetas,
 inventario, lista de la compra inteligente, clientes, escandallos, presupuestos,
-caja y finanzas**, con usuarios y permisos.
+caja y finanzas**. Sin usuario ni contraseña: cada persona tiene su propia pastelería.
 
 Se instala como una app en el móvil (icono en la pantalla de inicio) y todos los
 datos se guardan en una base de datos en tu propio servidor.
@@ -40,12 +40,16 @@ datos se guardan en una base de datos en tu propio servidor.
 - Al registrar una señal o un cobro → se actualiza lo pendiente.
 - Al entregar → se registra como venta y, si queda dinero pendiente, se ofrece cobrarlo en ese momento.
 
-### Usuarios y permisos
+### Cada uno su pastelería (sin usuario ni contraseña)
 
-- **Administrador**: puede todo.
-- **Empleados**: ven y actualizan pedidos, calendario, producción, clientes y la lista de la compra.
-  El administrador decide en *Configuración* si además pueden ver las finanzas, ver costes y márgenes,
-  tocar el inventario, editar el catálogo y las recetas, o borrar datos.
+- La primera vez que alguien abre la app, escribe el nombre de su pastelería y empieza a usarla.
+  No hay que registrarse ni iniciar sesión.
+- Cada persona tiene **sus propios datos**: nadie ve los pedidos, clientes o recetas de otro.
+- El móvil recuerda su pastelería. Para abrir **la misma** en otro móvil u ordenador (o si se borran los
+  datos del navegador), en *Configuración → Usarla en otro móvil u ordenador* está su **enlace de acceso**:
+  se copia o se envía por WhatsApp y se abre en el otro dispositivo. Quien tenga ese enlace puede ver y
+  cambiar los datos, así que hay que guardarlo bien.
+- *Salir de esta pastelería* la quita solo de ese dispositivo; los datos no se borran.
 
 ### Copias de seguridad
 
@@ -62,8 +66,10 @@ datos se guardan en una base de datos en tu propio servidor.
 La versión en internet funciona con **Vercel** (la web y la API) y **Supabase** (la base de datos PostgreSQL, en París):
 
 - La web se sirve desde el CDN de Vercel y la API es una función en París (`cdg1`), junto a la base de datos.
-- Los datos están en un esquema privado (`obrador`) con un usuario propio de la aplicación; no se exponen por la API pública de Supabase.
-- Una tarea diaria de Vercel (cron) pasa los pedidos a producción, limpia fotos sin usar y hace la copia de seguridad.
+- Cada pastelería tiene su propio esquema de Postgres (`t_…`) con todas sus tablas; en el esquema base (`obrador`)
+  solo están la lista de pastelerías y sus llaves de acceso (guardadas cifradas con SHA-256). La base de datos
+  la usa un usuario propio de la aplicación y no se expone por la API pública de Supabase.
+- Una tarea diaria de Vercel (cron) pasa los pedidos a producción, limpia fotos sin usar y hace la copia de seguridad de cada pastelería.
 - Cada vez que se sube código a la rama conectada de GitHub, Vercel la vuelve a publicar sola.
 
 Variables de entorno en Vercel:
@@ -88,8 +94,8 @@ npm start
 
 Abre `http://localhost:3000`. Sin `DATABASE_URL` usa una base de datos Postgres local
 integrada (PGlite) en la carpeta `data/`, sin instalar nada más. Con `DATABASE_URL` usa
-el Postgres que le indiques. La primera vez te pedirá el nombre del negocio y crear tu
-usuario de administrador (puedes cargar **datos de ejemplo** para probarla).
+el Postgres que le indiques. La primera vez te pedirá el nombre de tu pastelería (puedes
+cargar **datos de ejemplo** para probarla).
 
 ### Con Docker
 
@@ -115,7 +121,7 @@ npm run typecheck     # comprobación de tipos de servidor y web
 npm run build:vercel  # salida para Vercel (.vercel/output)
 ```
 
-- **Servidor**: Node.js + Express + PostgreSQL (`pg`; PGlite en local y en las pruebas), validación con `zod`, sesiones con cookie `httpOnly`.
+- **Servidor**: Node.js + Express + PostgreSQL (`pg`; PGlite en local y en las pruebas), validación con `zod`, llave de acceso de cada pastelería en una cookie `httpOnly` y un esquema de Postgres por pastelería.
 - **Web**: React + TypeScript + Vite + Tailwind CSS + TanStack Query. Es una PWA.
 - **Estructura**:
   - `server/db` — conexión, esquema PostgreSQL, migraciones automáticas y datos de ejemplo

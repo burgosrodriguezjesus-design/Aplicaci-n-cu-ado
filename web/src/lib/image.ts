@@ -33,4 +33,10 @@ export async function uploadImage(file: File): Promise<number> {
   return r.id;
 }
 
-export const imageUrl = (id: number) => `/api/images/${id}`;
+// Cada pastelería numera sus fotos desde 1: su número va en la dirección para que la
+// caché del navegador no mezcle fotos si en el mismo dispositivo se cambia de pastelería.
+let bakery = 0;
+export const setImageBakery = (id: number) => {
+  bakery = id;
+};
+export const imageUrl = (id: number) => `/api/images/${id}?b=${bakery}`;

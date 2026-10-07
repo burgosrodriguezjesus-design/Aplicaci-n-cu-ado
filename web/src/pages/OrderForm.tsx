@@ -11,7 +11,7 @@ import {
 } from '@shared/constants';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { addDays, money, num, relDay, today } from '../lib/format';
+import { addDays, money, relDay, today } from '../lib/format';
 import type { Customer, Extra, Order, OrderLine, OrderSummary, Product } from '../lib/types';
 import { PhotoPicker } from '../components/PhotoPicker';
 import {

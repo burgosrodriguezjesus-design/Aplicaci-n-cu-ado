@@ -10,7 +10,6 @@ import {
   FileText,
   House,
   LayoutGrid,
-  LogOut,
   Package,
   Search,
   Settings,
@@ -46,7 +45,7 @@ export const MORE = [
 const MORE_PATHS = MORE.map((m) => m.to).concat('/mas');
 
 export function Layout() {
-  const { businessName, user, permissions, logout } = useAuth();
+  const { businessName, permissions } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const loc = useLocation();
   const reminders = useApi<Reminder[]>('/reminders', { refetchInterval: 120_000 });
@@ -106,18 +105,6 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="border-t border-cream-200 p-3 flex items-center gap-2">
-          <div className="h-9 w-9 rounded-full bg-berry-100 text-berry-700 font-extrabold flex items-center justify-center">
-            {user?.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-bold text-sm truncate">{user?.name}</div>
-            <div className="text-xs text-choco-500">{user?.role === 'admin' ? 'Administrador' : 'Empleado'}</div>
-          </div>
-          <button type="button" className="p-2 rounded-lg hover:bg-cream-100 text-choco-500" title="Cerrar sesión" onClick={logout}>
-            <LogOut size={18} />
-          </button>
-        </div>
       </aside>
 
       {/* Barra superior (móvil) */}

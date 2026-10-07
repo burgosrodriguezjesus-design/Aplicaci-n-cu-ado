@@ -1,11 +1,11 @@
 import express, { Router, type Request } from 'express';
 import { z } from 'zod';
 import { all, get, insert, run } from '../db/db.js';
-import { can, COOKIE, h, permissions, requireAdmin } from '../http.js';
+import { can, h, permissions, requireAdmin } from '../http.js';
 import { addDays, today } from '../lib/clock.js';
-import { badRequest, forbidden, notFound, toId } from '../lib/util.js';
+import { badRequest, notFound, toId } from '../lib/util.js';
 import { getSettings, saveSettings } from '../services/settings.js';
-import { createUser, deleteUser, listUsers, tokenHash, updateUser } from '../services/auth.js';
+import { seedBasics } from '../db/seed.js';
 import { getDashboard, getReminders, search } from '../services/dashboard.js';
 import { runAutomations } from '../services/orders.js';
 import { backupData, createBackup, exportData, listBackups, resetAll, restoreData } from '../services/backup.js';
@@ -29,17 +29,12 @@ const PUBLIC_KEYS: (keyof Settings)[] = [
   'quote_validity_days',
 ];
 
-/** Los empleados solo ven la configuración que necesitan para trabajar. */
+/** Configuración que ve quien usa la app (sin pastelería, solo lo público). */
 export function visibleSettings(req: Request): Partial<Settings> {
   const s = getSettings();
-  if (req.user?.role === 'admin') return s;
+  if (can(req)) return s;
   const out: Partial<Settings> = {};
   for (const k of PUBLIC_KEYS) (out as any)[k] = s[k];
-  if (can(req, 'perm_costs')) {
-    out.labor_cost_per_hour = s.labor_cost_per_hour;
-    out.overhead_percent = s.overhead_percent;
-    out.target_margin_percent = s.target_margin_percent;
-  }
   return out;
 }
 
@@ -85,27 +80,6 @@ coreRouter.put(
 );
 
 coreRouter.get('/settings/defaults', requireAdmin, h(() => DEFAULT_SETTINGS));
-
-// ---------------------------------------------------------------------------
-// Usuarios
-// ---------------------------------------------------------------------------
-
-coreRouter.get('/users', requireAdmin, h(() => listUsers()));
-coreRouter.post('/users', requireAdmin, h(async (req) => ({ id: await createUser(req.body) })));
-coreRouter.put(
-  '/users/:id',
-  requireAdmin,
-  h((req) => updateUser(toId(req.params.id), req.body)),
-);
-coreRouter.delete(
-  '/users/:id',
-  requireAdmin,
-  h(async (req) => {
-    const id = toId(req.params.id);
-    if (id === req.user!.id) throw badRequest('No puedes borrar tu propio usuario');
-    await deleteUser(id);
-  }),
-);
 
 // ---------------------------------------------------------------------------
 // Panel, recordatorios y buscador
@@ -197,8 +171,9 @@ coreRouter.post(
   }),
 );
 
-coreRouter.get('/images/:id', async (req, res, next) => {
-  try {
+coreRouter.get(
+  '/images/:id',
+  h(async (req, res) => {
     const img = await get<{ mime: string; data: Buffer }>('SELECT mime, data FROM images WHERE id = ?', [toId(req.params.id)]);
     if (!img) {
       res.status(404).end();
@@ -207,10 +182,8 @@ coreRouter.get('/images/:id', async (req, res, next) => {
     res.setHeader('Content-Type', img.mime);
     res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
     res.send(img.data);
-  } catch (e) {
-    next(e);
-  }
-});
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Copias de seguridad
@@ -225,30 +198,20 @@ function sendBackup(res: express.Response, name: string, data: Buffer) {
   res.send(data);
 }
 
-coreRouter.get('/backups/download/current', requireAdmin, async (_req, res, next) => {
-  try {
+coreRouter.get(
+  '/backups/download/current',
+  h(async (_req, res) => {
     sendBackup(res, `copia-pasteleria-${today()}`, await exportData());
-  } catch (e) {
-    next(e);
-  }
-});
+  }),
+);
 
-coreRouter.get('/backups/download/:id', requireAdmin, async (req, res, next) => {
-  try {
+coreRouter.get(
+  '/backups/download/:id',
+  h(async (req, res) => {
     const b = await backupData(toId(req.params.id));
     sendBackup(res, b.name, b.data);
-  } catch (e) {
-    next(e);
-  }
-});
-
-/** Datos de la sesión actual para no echar a quien restaura. */
-async function currentSession(req: Request) {
-  const token = req.cookies?.[COOKIE];
-  if (!token || !req.user) return undefined;
-  const s = await get('SELECT expires_at FROM sessions WHERE token_hash = ?', [tokenHash(token)]);
-  return s ? { tokenHash: tokenHash(token), userId: req.user.id, expires: s.expires_at } : undefined;
-}
+  }),
+);
 
 coreRouter.post(
   '/backups/restore',
@@ -256,7 +219,7 @@ coreRouter.post(
   express.raw({ type: () => true, limit: '4mb' }),
   h(async (req) => {
     if (!Buffer.isBuffer(req.body) || !req.body.length) throw badRequest('Selecciona un archivo de copia');
-    await restoreData(req.body, await currentSession(req));
+    await restoreData(req.body);
   }),
 );
 
@@ -265,17 +228,21 @@ coreRouter.post(
   requireAdmin,
   h(async (req) => {
     const b = await backupData(toId(req.params.id));
-    await restoreData(b.data, await currentSession(req));
+    await restoreData(b.data);
   }),
 );
 
-/** Borrar todo y volver a la instalación inicial. */
+/** Borrar todos los datos y dejar la pastelería vacía (se conserva el nombre). */
 coreRouter.post(
   '/reset',
   requireAdmin,
   h(async (req) => {
     const input = z.object({ confirm: z.literal('BORRAR', { message: 'Escribe BORRAR para confirmar' }), keep_backups: z.boolean().default(true) }).parse(req.body);
+    const { business_name } = getSettings();
     await resetAll({ keepBackups: input.keep_backups });
+    await insert('users', { name: req.user!.name, username: 'yo', password_hash: '-', role: 'admin', active: 1 });
+    await saveSettings({ business_name });
+    await seedBasics();
   }),
 );
 
@@ -367,17 +334,14 @@ const EXPORTS: Record<string, { finance?: boolean; sql: string; columns: [string
   },
 };
 
-coreRouter.get('/export/:what', async (req, res, next) => {
-  try {
+coreRouter.get(
+  '/export/:what',
+  h(async (req, res) => {
     const def = EXPORTS[String(req.params.what)];
     if (!def) throw notFound('Exportación');
-    if (def.finance && !can(req, 'perm_finances')) throw forbidden();
-    if (req.user?.role !== 'admin' && !def.finance && !can(req, 'perm_finances')) throw forbidden();
     const body = csv(await all(def.sql), def.columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${req.params.what}-${today()}.csv"`);
     res.send(body);
-  } catch (e) {
-    next(e);
-  }
-});
+  }),
+);

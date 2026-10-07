@@ -1,15 +1,15 @@
 import { Link } from 'react-router';
-import { ChevronRight, LogOut } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { MORE } from '../components/Layout';
-import { Button, PageHeader } from '../components/ui';
+import { PageHeader } from '../components/ui';
 
 export function More() {
-  const { permissions, user, logout } = useAuth();
+  const { permissions, businessName } = useAuth();
   const items = MORE.filter((m) => !m.perm || permissions[m.perm]);
   return (
     <div className="space-y-5">
-      <PageHeader title="Más" subtitle={`${user?.name} · ${user?.role === 'admin' ? 'Administrador' : 'Empleado'}`} />
+      <PageHeader title="Más" subtitle={businessName} />
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {items.map((m) => (
           <Link key={m.to} to={m.to} className="card p-4 flex flex-col gap-2 active:scale-[0.98] transition hover:border-berry-200">
@@ -21,9 +21,6 @@ export function More() {
           </Link>
         ))}
       </div>
-      <Button variant="outline" block icon={<LogOut size={18} />} onClick={logout}>
-        Cerrar sesión
-      </Button>
     </div>
   );
 }

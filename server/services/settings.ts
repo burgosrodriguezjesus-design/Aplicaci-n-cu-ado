@@ -1,12 +1,11 @@
-import { all, get, run, tx } from '../db/db.js';
+import { all, currentTenant, get, run, tx } from '../db/db.js';
 import { DEFAULT_SETTINGS, type Settings } from '../../shared/constants.js';
 
-// Copia en memoria de la configuración. Se recarga al principio de cada petición
-// (una consulta muy barata), así getSettings() puede ser síncrona en todo el código.
-let cache: Settings = { ...DEFAULT_SETTINGS };
-
+// La configuración de la pastelería se carga al principio de cada petición (una consulta
+// muy barata) y se guarda en el contexto de esa pastelería, así getSettings() puede ser
+// síncrona en todo el código sin mezclar datos de pastelerías distintas.
 export function getSettings(): Settings {
-  return cache;
+  return (currentTenant()?.settings as Settings | undefined) ?? DEFAULT_SETTINGS;
 }
 
 export async function loadSettings(): Promise<Settings> {
@@ -20,8 +19,9 @@ export async function loadSettings(): Promise<Settings> {
       /* valor corrupto: se ignora y queda el valor por defecto */
     }
   }
-  cache = s as unknown as Settings;
-  return cache;
+  const ctx = currentTenant();
+  if (ctx) ctx.settings = s;
+  return s as unknown as Settings;
 }
 
 export async function saveSettings(patch: Partial<Settings>) {

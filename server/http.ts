@@ -1,24 +1,56 @@
-import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { CookieOptions, NextFunction, Request, RequestHandler, Response } from 'express';
 import { ZodError } from 'zod';
-import { HttpError, forbidden } from './lib/util.js';
-import { sessionUser, type SessionUser } from './services/auth.js';
-import { getSettings, loadSettings } from './services/settings.js';
-import { ensureDb } from './db/db.js';
+import { HttpError } from './lib/util.js';
+import { loadSettings } from './services/settings.js';
+import { addTenantKey, ensureDb, get, hashKey, insert, legacyTenantBySession, tenantByKey, withTenant, type Tenant } from './db/db.js';
 import type { Permission } from '../shared/constants.js';
+
+export interface SessionUser {
+  id: number;
+  name: string;
+}
 
 declare module 'express-serve-static-core' {
   interface Request {
+    tenant?: Tenant;
     user?: SessionUser;
   }
 }
 
-export const COOKIE = 'obrador_sid';
+/** Cookie con la llave de acceso a la pastelería de este dispositivo. */
+export const COOKIE = 'obrador_t';
+/** Cookie de sesión de la versión anterior (con usuario y contraseña). */
+const LEGACY_COOKIE = 'obrador_sid';
+const COOKIE_DAYS = 400;
 
-/** Envuelve un manejador: lo que devuelva se envía como JSON. */
+export function setKeyCookie(req: Request, res: Response, token: string) {
+  const opts: CookieOptions = { httpOnly: true, sameSite: 'lax', secure: req.secure, maxAge: COOKIE_DAYS * 86400000, path: '/' };
+  res.cookie(COOKIE, token, opts);
+}
+
+/** Ejecuta fn con la base de datos de la pastelería: configuración cargada y usuario de la casa. */
+export function inTenant<T>(t: Tenant, fn: (user: SessionUser) => Promise<T>): Promise<T> {
+  return withTenant(t, async () => {
+    await loadSettings();
+    let u = await get<SessionUser>('SELECT id, name FROM users WHERE active = 1 ORDER BY (role = \'admin\') DESC, id LIMIT 1');
+    if (!u) {
+      const id = await insert('users', { name: 'Yo', username: 'yo', password_hash: '-', role: 'admin', active: 1 });
+      u = { id, name: 'Yo' };
+    }
+    return fn(u);
+  });
+}
+
+/** Envuelve un manejador: corre dentro de la pastelería de quien llama y lo que devuelva se envía como JSON. */
 export function h(fn: (req: Request, res: Response) => unknown): RequestHandler {
   return async (req, res, next) => {
     try {
-      const out = await fn(req, res);
+      const out = req.tenant
+        ? await inTenant(req.tenant, async (user) => {
+            req.user = user;
+            return fn(req, res);
+          })
+        : await fn(req, res);
       if (!res.headersSent) {
         if (out === undefined) res.json({ ok: true });
         else res.json(out);
@@ -29,12 +61,21 @@ export function h(fn: (req: Request, res: Response) => unknown): RequestHandler 
   };
 }
 
-/** Al empezar cada petición: base de datos lista, configuración al día y usuario de la sesión. */
-export async function loadUser(req: Request, _res: Response, next: NextFunction) {
+/** Al empezar cada petición: base de datos lista y pastelería de este dispositivo (por su cookie). */
+export async function loadUser(req: Request, res: Response, next: NextFunction) {
   try {
     await ensureDb();
-    await loadSettings();
-    req.user = (await sessionUser(req.cookies?.[COOKIE])) ?? undefined;
+    const tenant = await tenantByKey(req.cookies?.[COOKIE]);
+    if (tenant) req.tenant = tenant;
+    else if (req.cookies?.[LEGACY_COOKIE]) {
+      // Quien ya tenía la sesión abierta en la versión anterior sigue entrando en su pastelería.
+      const legacy = await legacyTenantBySession(hashKey(req.cookies[LEGACY_COOKIE]));
+      if (legacy) {
+        setKeyCookie(req, res, await addTenantKey(legacy.id));
+        req.tenant = legacy;
+      }
+      res.clearCookie(LEGACY_COOKIE, { path: '/' });
+    }
     next();
   } catch (e) {
     next(e);
@@ -42,43 +83,29 @@ export async function loadUser(req: Request, _res: Response, next: NextFunction)
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
-    res.status(401).json({ error: 'Tienes que iniciar sesión' });
+  if (!req.tenant) {
+    res.status(401).json({ error: 'Primero crea tu pastelería' });
     return;
   }
   next();
 }
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.user?.role !== 'admin') {
-    res.status(403).json({ error: 'Solo el administrador puede hacer esto' });
-    return;
-  }
+// Sin usuarios ni roles: quien abre su pastelería puede hacerlo todo en ella.
+export function requireAdmin(_req: Request, _res: Response, next: NextFunction) {
   next();
 }
 
-export function can(req: Request, perm: Permission): boolean {
-  if (!req.user) return false;
-  if (req.user.role === 'admin') return true;
-  return !!getSettings()[perm];
+export function can(req: Request, _perm?: Permission): boolean {
+  return !!req.tenant;
 }
 
-export function requirePerm(perm: Permission) {
-  return (req: Request, _res: Response, next: NextFunction) => {
-    if (!can(req, perm)) return next(forbidden());
-    next();
-  };
+export function requirePerm(_perm: Permission) {
+  return requireAdmin;
 }
 
 export function permissions(req: Request) {
-  return {
-    finances: can(req, 'perm_finances'),
-    costs: can(req, 'perm_costs'),
-    inventory: can(req, 'perm_inventory'),
-    catalog: can(req, 'perm_catalog'),
-    delete: can(req, 'perm_delete'),
-    admin: req.user?.role === 'admin',
-  };
+  const ok = can(req);
+  return { finances: ok, costs: ok, inventory: ok, catalog: ok, delete: ok, admin: ok };
 }
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {

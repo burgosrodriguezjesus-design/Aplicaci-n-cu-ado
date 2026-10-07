@@ -4,8 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDb } from './db/db.js';
 import { createApp } from './app.js';
-import { loadSettings } from './services/settings.js';
-import { runDaily } from './services/daily.js';
+import { runDailyAll } from './services/daily.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // En producción el servidor compilado está en dist/ y la web en dist/web.
@@ -16,8 +15,7 @@ const app = createApp({ webDir });
 
 async function daily() {
   try {
-    await loadSettings();
-    await runDaily();
+    await runDailyAll();
   } catch (e) {
     console.error('Error en las tareas automáticas', e);
   }

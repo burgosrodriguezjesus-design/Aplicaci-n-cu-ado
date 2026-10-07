@@ -64,8 +64,6 @@ function parse(buffer: Buffer) {
     throw badRequest('El archivo no es una copia de seguridad válida');
   }
   if (data?.app !== 'obrador' || typeof data.tables !== 'object') throw badRequest('El archivo no es una copia de esta aplicación');
-  const users = data.tables.users as any[] | undefined;
-  if (!users?.some((u) => u.role === 'admin' && u.active)) throw badRequest('La copia no tiene ningún administrador activo');
   return data as { tables: Record<string, Record<string, unknown>[]> };
 }
 
@@ -79,11 +77,8 @@ async function insertRows(table: string, rows: Record<string, unknown>[]) {
   }
 }
 
-/**
- * Sustituye todos los datos por los de la copia. Antes guarda una copia del estado actual.
- * `keepSession` vuelve a dejar abierta la sesión de quien restaura (si su usuario existe en la copia).
- */
-export async function restoreData(buffer: Buffer, keepSession?: { tokenHash: string; userId: number; expires: string }) {
+/** Sustituye todos los datos por los de la copia. Antes guarda una copia del estado actual. */
+export async function restoreData(buffer: Buffer) {
   const data = parse(buffer);
   await createBackup('antes-de-restaurar');
   await tx(async () => {
@@ -108,19 +103,12 @@ export async function restoreData(buffer: Buffer, keepSession?: { tokenHash: str
       }
     }
     for (const [q, o] of quoteOrders) await run('UPDATE quotes SET order_id = ? WHERE id = ?', [o, q]);
-    if (keepSession && (await get('SELECT id FROM users WHERE id = ? AND active = 1', [keepSession.userId]))) {
-      await run('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)', [
-        keepSession.tokenHash,
-        keepSession.userId,
-        keepSession.expires,
-      ]);
-    }
   });
 }
 
 /**
  * Borra todos los datos para empezar de cero (por ejemplo, quitar los datos de ejemplo).
- * Por defecto guarda antes una copia, que se puede restaurar después de volver a instalar.
+ * Por defecto guarda antes una copia, que se puede restaurar después.
  */
 export async function resetAll(opts: { keepBackups: boolean }) {
   if (opts.keepBackups) await createBackup('antes-de-borrar');

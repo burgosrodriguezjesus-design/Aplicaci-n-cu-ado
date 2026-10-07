@@ -1,7 +1,18 @@
 # Modelo de datos
 
-Base de datos: **PostgreSQL** (Supabase en internet; PGlite integrado en local), en el
-esquema `obrador`. Las migraciones se aplican solas al arrancar. Todas las fechas "de negocio"
+Base de datos: **PostgreSQL** (Supabase en internet; PGlite integrado en local).
+
+**Una pastelería = un esquema.** Cada pastelería tiene su propio esquema (`t_<16 hex>`) con todas
+las tablas de abajo. En el esquema base (`obrador` en Supabase, `public` en local) solo hay:
+
+| Tabla | Campos | Notas |
+|---|---|---|
+| `tenants` | schema, name, version, legacy, created_at, last_seen_at | Una fila por pastelería. `version` = migraciones aplicadas a su esquema. |
+| `tenant_keys` | token_hash, tenant_id | Llaves de acceso (cookie del dispositivo / enlace para otro dispositivo), guardadas con SHA-256. |
+
+Cada petición abre una transacción con `SET LOCAL search_path` al esquema de su pastelería, así
+el código usa nombres de tabla normales y nunca ve datos de otra. Las migraciones de cada esquema
+se aplican solas la primera vez que se usa después de una actualización. Todas las fechas "de negocio"
 (entrega, gasto, cobro) se guardan como texto local `YYYY-MM-DD` / `HH:MM`
 en la zona horaria del negocio; las marcas técnicas (`created_at`) en ISO UTC.
 
@@ -9,7 +20,7 @@ en la zona horaria del negocio; las marcas técnicas (`created_at`) en ISO UTC.
 
 ```
                          ┌──────────────┐
-                         │   users      │ admin / employee
+                         │   users      │ quien la usa
                          └──────┬───────┘
                                 │ crea / registra
  ┌──────────┐  1   N  ┌─────────┴──┐  1   N  ┌──────────────┐  N   1  ┌──────────┐
@@ -43,12 +54,12 @@ en la zona horaria del negocio; las marcas técnicas (`created_at`) en ISO UTC.
 
 ## Tablas
 
-### Usuarios y seguridad
+### Persona y configuración
 | Tabla | Campos principales | Notas |
 |---|---|---|
-| `users` | name, username, password_hash (bcrypt), role (`admin`/`employee`), active | El primer usuario creado es administrador. |
-| `sessions` | token_hash, user_id, expires_at | Cookie `httpOnly`; el token se guarda cifrado (SHA-256). |
-| `settings` | key, value (JSON) | Datos del negocio, costes, plazos y **permisos de empleados**. |
+| `users` | name, role, active | Una persona por pastelería (quien la usa), para «creado por». Ya no hay contraseñas. |
+| `sessions` | token_hash, user_id, expires_at | Solo de la versión anterior (con contraseña): sirve para pasar a la nueva sin perder el acceso. |
+| `settings` | key, value (JSON) | Datos del negocio, costes y plazos. |
 
 ### Clientes
 | `customers` | name, phone, email, address, birthday, allergens (JSON), preferences, notes |

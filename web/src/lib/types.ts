@@ -3,8 +3,6 @@ import type { OrderStatus, ProductCategory, Stage, Unit } from '@shared/constant
 export interface User {
   id: number;
   name: string;
-  username: string;
-  role: 'admin' | 'employee';
 }
 
 export interface Permissions {
