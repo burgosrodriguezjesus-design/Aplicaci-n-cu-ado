@@ -283,8 +283,8 @@ describe('panel, recordatorios y buscador (datos de ejemplo)', () => {
     expect(d.counts.today).toBe(2);
     expect(d.counts.tomorrow).toBe(2);
     expect(d.counts.overdue).toBe(1);
-    expect(d.low_stock.map((l: any) => l.message)).toContain('⚠️ Solo quedan 12 huevos.');
-    expect(d.low_stock.map((l: any) => l.message)).toContain('⚠️ Solo quedan 2 cajas tarta grande.');
+    expect(d.low_stock.map((l: any) => l.message)).toContain('Solo quedan 12 huevos.');
+    expect(d.low_stock.map((l: any) => l.message)).toContain('Solo quedan 2 cajas tarta grande.');
     const reminders = (await admin.get('/api/reminders')).body.map((r: any) => r.text);
     expect(reminders).toContain('Pedido de Marta García mañana a las 17:00. Falta: decorar, empaquetar.');
     expect(d.money.revenue).toBeGreaterThan(0);
