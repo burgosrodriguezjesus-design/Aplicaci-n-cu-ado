@@ -1,16 +1,13 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import request from 'supertest';
-import { openDb, DATA_DIR } from '../db/db.js';
+import { openDb } from '../db/db.js';
 import { createApp } from '../app.js';
 import { setNow } from '../lib/clock.js';
 
 /** Base de datos nueva en un fichero temporal + app + agente con sesión de administrador. */
 export async function freshApp(opts: { demo?: boolean; now?: string } = {}) {
   setNow(opts.now ? new Date(opts.now) : new Date('2026-10-07T08:00:00Z'));
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const file = path.join(DATA_DIR, `t-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
-  openDb(file);
+  // Postgres real en memoria (PGlite): cada prueba empieza con una base de datos limpia.
+  await openDb({ url: null, dataDir: 'memory' });
   const app = createApp();
   const admin = request.agent(app);
   const r = await admin

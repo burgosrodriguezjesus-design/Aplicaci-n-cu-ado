@@ -49,13 +49,30 @@ datos se guardan en una base de datos en tu propio servidor.
 
 ### Copias de seguridad
 
-- Copia automática diaria (se guardan las 30 últimas) en `data/backups/`.
-- Desde *Configuración* puedes descargar una copia, guardar una en el servidor o restaurar cualquiera.
-- Todo (incluidas las fotos) está en un único archivo, `data/obrador.db`.
+- Copia automática cada noche (se guardan las 30 últimas) dentro de la propia base de datos.
+- Desde *Configuración* puedes descargar una copia (archivo `.json.gz`), guardar una en la app o restaurar cualquiera.
+- Las copias llevan todos los datos del negocio; las fotos se quedan en la base de datos (Supabase hace además sus propias copias).
 
 ---
 
-## Ponerla en marcha
+## Dónde está instalada
+
+La versión en internet funciona con **Vercel** (la web y la API) y **Supabase** (la base de datos PostgreSQL, en París):
+
+- La web se sirve desde el CDN de Vercel y la API es una función en París (`cdg1`), junto a la base de datos.
+- Los datos están en un esquema privado (`obrador`) con un usuario propio de la aplicación; no se exponen por la API pública de Supabase.
+- Una tarea diaria de Vercel (cron) pasa los pedidos a producción, limpia fotos sin usar y hace la copia de seguridad.
+- Cada vez que se sube código a la rama conectada de GitHub, Vercel la vuelve a publicar sola.
+
+Variables de entorno en Vercel:
+
+| Variable | Para qué |
+|---|---|
+| `DATABASE_URL` | Conexión a Postgres (pooler de Supabase en modo transacción, puerto 6543) |
+| `SETUP_CODE` | Código que pide la pantalla de instalación inicial (para que nadie más pueda crear el administrador) |
+| `CRON_SECRET` | Protege la tarea diaria |
+
+## Ponerla en marcha en tu propio ordenador o servidor
 
 Necesitas [Node.js](https://nodejs.org) 20 o superior.
 
@@ -65,9 +82,10 @@ npm run build
 npm start
 ```
 
-Abre `http://localhost:3000`. La primera vez te pedirá el nombre del negocio y crear
-tu usuario de administrador (puedes cargar **datos de ejemplo** para probarla).
-En la consola verás también la dirección para abrirla **desde el móvil** si está en la misma wifi.
+Abre `http://localhost:3000`. Sin `DATABASE_URL` usa una base de datos Postgres local
+integrada (PGlite) en la carpeta `data/`, sin instalar nada más. Con `DATABASE_URL` usa
+el Postgres que le indiques. La primera vez te pedirá el nombre del negocio y crear tu
+usuario de administrador (puedes cargar **datos de ejemplo** para probarla).
 
 ### Con Docker
 
@@ -76,16 +94,6 @@ docker compose up -d --build
 ```
 
 Los datos se guardan en la carpeta `./data` del servidor.
-
-### En internet (para usarla desde cualquier sitio)
-
-Sirve cualquier servidor que ejecute Node.js o Docker **con disco persistente** (por ejemplo un
-VPS, Railway, Render o Fly.io con un volumen montado en `/data`). Recomendaciones:
-
-- Pon la aplicación detrás de **HTTPS** (la mayoría de estos servicios lo hacen solos).
-- Variables de entorno: `PORT` (puerto, por defecto 3000), `DATA_DIR` (carpeta de datos, por
-  defecto `./data`), `TRUST_PROXY` (si está detrás de un proxy que no sea local).
-- Descarga una copia de seguridad de vez en cuando y guárdala fuera del servidor.
 
 ### Instalarla en el móvil
 
@@ -97,15 +105,16 @@ Abre la dirección en el navegador del móvil y elige **«Añadir a pantalla de 
 ## Para desarrolladores
 
 ```bash
-npm run dev        # servidor (http://localhost:3000) + web con recarga (http://localhost:5173)
-npm test           # pruebas del servidor (reglas de negocio y automatizaciones)
-npm run typecheck  # comprobación de tipos de servidor y web
+npm run dev           # servidor (http://localhost:3000) + web con recarga (http://localhost:5173)
+npm test              # pruebas del servidor sobre Postgres en memoria (reglas de negocio y automatizaciones)
+npm run typecheck     # comprobación de tipos de servidor y web
+npm run build:vercel  # salida para Vercel (.vercel/output)
 ```
 
-- **Servidor**: Node.js + Express + SQLite (`better-sqlite3`), validación con `zod`, sesiones con cookie `httpOnly`.
+- **Servidor**: Node.js + Express + PostgreSQL (`pg`; PGlite en local y en las pruebas), validación con `zod`, sesiones con cookie `httpOnly`.
 - **Web**: React + TypeScript + Vite + Tailwind CSS + TanStack Query. Es una PWA.
 - **Estructura**:
-  - `server/db` — esquema, migraciones y datos de ejemplo
+  - `server/db` — conexión, esquema PostgreSQL, migraciones automáticas y datos de ejemplo
   - `server/services` — reglas de negocio (pedidos, costes, producción, compras, finanzas…)
   - `server/routes` — API REST (`/api/...`)
   - `shared/constants.ts` — estados, unidades, alérgenos y configuración comunes

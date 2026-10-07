@@ -2,7 +2,10 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
 import path from 'node:path';
-import { errorHandler, loadUser, requireAuth } from './http.js';
+import { errorHandler, h, loadUser, requireAuth } from './http.js';
+import { ensureDb } from './db/db.js';
+import { loadSettings } from './services/settings.js';
+import { runDaily } from './services/daily.js';
 import { authRouter } from './routes/auth.js';
 import { coreRouter } from './routes/core.js';
 import { ordersRouter } from './routes/orders.js';
@@ -11,24 +14,37 @@ import { businessRouter } from './routes/business.js';
 export function createApp(opts: { webDir?: string } = {}) {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', process.env.TRUST_PROXY ?? 'loopback, linklocal, uniquelocal');
+  app.set('trust proxy', process.env.TRUST_PROXY ?? (process.env.VERCEL ? true : 'loopback, linklocal, uniquelocal'));
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Frame-Options', 'DENY');
     next();
   });
-  app.use(cookieParser());
-  app.use(express.json({ limit: '2mb' }));
-  app.use(loadUser);
 
+  // Tarea diaria (cron de Vercel). Protegida con CRON_SECRET.
+  app.get(
+    '/api/cron/daily',
+    h(async (req, res) => {
+      const secret = process.env.CRON_SECRET;
+      if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+      await ensureDb();
+      await loadSettings();
+      return runDaily();
+    }),
+  );
+
+  app.use('/api', cookieParser(), express.json({ limit: '2mb' }), loadUser);
   app.use('/api/auth', authRouter);
   app.use('/api', requireAuth, coreRouter, ordersRouter, businessRouter);
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'No encontrado' });
   });
 
-  // Aplicación web compilada (modo producción).
+  // Aplicación web compilada (servidor propio; en Vercel la sirve su CDN).
   const webDir = opts.webDir;
   if (webDir && fs.existsSync(path.join(webDir, 'index.html'))) {
     app.use(

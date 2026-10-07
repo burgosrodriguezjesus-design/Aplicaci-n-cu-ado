@@ -1,5 +1,5 @@
 // Panel principal y recordatorios automáticos.
-import { all } from '../db/db.js';
+import { all, get } from '../db/db.js';
 import { addDays, diffDays, monthRange, nowLocal, startOfWeek, today } from '../lib/clock.js';
 import { eur, round2 } from '../lib/util.js';
 import { listOrders, prodDateSql, PAID_SQL } from './orders.js';
@@ -34,27 +34,32 @@ export function stockWarning(i: { name: string; quantity: number; unit: string }
   return `⚠️ Solo quedan ${fmtQty(i.quantity, i.unit)} de ${name}.`;
 }
 
-export function getDashboard(opts: { finances: boolean }) {
+export async function getDashboard(opts: { finances: boolean }) {
   const t = today();
   const tomorrow = addDays(t, 1);
   const weekStart = startOfWeek(t);
   const weekEnd = addDays(weekStart, 6);
   const nowTime = nowLocal().slice(11, 16);
 
-  const todayOrders = listOrders(`o.delivery_date = ? AND o.status <> 'cancelado'`, [t]);
-  const tomorrowOrders = listOrders(`o.delivery_date = ? AND o.status <> 'cancelado'`, [tomorrow]);
-  const weekOrders = listOrders(`o.delivery_date BETWEEN ? AND ? AND o.status <> 'cancelado'`, [weekStart, weekEnd]);
-  const overdue = listOrders(
+  const [todayOrders, tomorrowOrders, weekCount] = await Promise.all([
+    listOrders(`o.delivery_date = ? AND o.status <> 'cancelado'`, [t]),
+    listOrders(`o.delivery_date = ? AND o.status <> 'cancelado'`, [tomorrow]),
+    get<{ n: number }>(`SELECT COUNT(*) AS n FROM orders o WHERE o.delivery_date BETWEEN ? AND ? AND o.status <> 'cancelado'`, [
+      weekStart,
+      weekEnd,
+    ]),
+  ]);
+  const overdue = await listOrders(
     `${OPEN} AND (o.delivery_date < ? OR (o.delivery_date = ? AND o.delivery_time IS NOT NULL AND o.delivery_time < ?))`,
     [t, t, nowTime],
   );
-  const next = listOrders(
+  const next = (await listOrders(
     `${OPEN} AND (o.delivery_date > ? OR (o.delivery_date = ? AND (o.delivery_time IS NULL OR o.delivery_time >= ?)))`,
     [t, t, nowTime],
     `o.delivery_date, COALESCE(o.delivery_time, '23:59') LIMIT 1`,
-  )[0];
+  ))[0];
 
-  const low = lowStockItems().map((i) => ({
+  const low = (await lowStockItems()).map((i) => ({
     id: i.id,
     name: i.name,
     kind: i.kind,
@@ -67,9 +72,7 @@ export function getDashboard(opts: { finances: boolean }) {
   let money = null;
   if (opts.finances) {
     const { from, to } = monthRange(t.slice(0, 7));
-    const revenue = revenueBetween(from, to);
-    const expenses = expensesBetween(from, to);
-    const pending = pendingToCollect();
+    const [revenue, expenses, pending] = await Promise.all([revenueBetween(from, to), expensesBetween(from, to), pendingToCollect()]);
     money = {
       revenue: revenue.total,
       pending: pending.total,
@@ -86,7 +89,7 @@ export function getDashboard(opts: { finances: boolean }) {
     counts: {
       today: todayOrders.length,
       tomorrow: tomorrowOrders.length,
-      week: weekOrders.length,
+      week: weekCount!.n,
       overdue: overdue.length,
     },
     today_orders: todayOrders,
@@ -95,7 +98,7 @@ export function getDashboard(opts: { finances: boolean }) {
     next_delivery: next ?? null,
     money,
     low_stock: low,
-    reminders: getReminders().slice(0, 5),
+    reminders: (await getReminders()).slice(0, 5),
   };
 }
 
@@ -125,13 +128,13 @@ function at(time: string | null) {
 }
 
 /** Recordatorios calculados a partir de los datos + recordatorios manuales. */
-export function getReminders(): Reminder[] {
+export async function getReminders(): Promise<Reminder[]> {
   const t = today();
   const out: Reminder[] = [];
   const pd = prodDateSql('o');
 
   // Atrasados
-  for (const o of all(
+  for (const o of await all(
     `SELECT o.* FROM orders o WHERE ${OPEN} AND o.delivery_date < ? ORDER BY o.delivery_date`,
     [t],
   )) {
@@ -146,16 +149,18 @@ export function getReminders(): Reminder[] {
   }
 
   // Entregas de hoy y mañana con lo que falta por hacer
-  const soon = all(
+  const soon = await all(
     `SELECT o.*, ${PAID_SQL} AS paid FROM orders o
       WHERE o.status NOT IN ('nuevo','entregado','cancelado') AND o.delivery_date BETWEEN ? AND ?
       ORDER BY o.delivery_date, o.delivery_time`,
     [t, addDays(t, 1)],
   );
   for (const o of soon) {
-    const pendingStages = all<{ stage: Stage }>(
-      `SELECT DISTINCT stage FROM production_tasks WHERE order_id = ? AND done = 0 AND stage <> 'entregar' ORDER BY sort`,
-      [o.id],
+    const pendingStages = (
+      await all<{ stage: Stage }>(
+        `SELECT stage FROM production_tasks WHERE order_id = ? AND done = 0 AND stage <> 'entregar' GROUP BY stage ORDER BY MIN(sort)`,
+        [o.id],
+      )
     ).map((r) => STAGE_LABELS[r.stage].toLowerCase());
     const missing = pendingStages.length
       ? ` Falta: ${pendingStages.join(', ')}.`
@@ -182,7 +187,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Pedidos que hay que empezar a preparar
-  for (const o of all(
+  for (const o of await all(
     `SELECT o.* FROM orders o WHERE o.status IN ('confirmado','pendiente') AND ${pd} <= ? AND o.delivery_date > ?
       ORDER BY o.delivery_date`,
     [t, addDays(t, 1)],
@@ -198,7 +203,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Pedidos sin confirmar con fecha cercana
-  for (const o of all(
+  for (const o of await all(
     `SELECT o.* FROM orders o WHERE o.status = 'nuevo' AND o.delivery_date BETWEEN ? AND ? ORDER BY o.delivery_date`,
     [t, addDays(t, 3)],
   )) {
@@ -213,7 +218,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Pagos pendientes de pedidos ya entregados
-  for (const o of all(
+  for (const o of await all(
     `SELECT o.*, ${PAID_SQL} AS paid FROM orders o WHERE o.status = 'entregado' AND o.total - ${PAID_SQL} > 0.005
       ORDER BY o.delivery_date DESC LIMIT 20`,
   )) {
@@ -228,7 +233,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Stock bajo
-  for (const i of lowStockItems()) {
+  for (const i of await lowStockItems()) {
     out.push({
       id: `stock-${i.id}`,
       type: 'stock',
@@ -239,7 +244,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Compras necesarias para los pedidos
-  const shopping = getShoppingList();
+  const shopping = await getShoppingList();
   const forOrders = shopping.items.filter((i) => i.reason === 'orders');
   if (forOrders.length) {
     out.push({
@@ -255,7 +260,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Cumpleaños de clientes (próximos 7 días)
-  for (const c of all("SELECT id, name, birthday FROM customers WHERE birthday IS NOT NULL AND birthday <> ''")) {
+  for (const c of await all("SELECT id, name, birthday FROM customers WHERE birthday IS NOT NULL AND birthday <> ''")) {
     const md = String(c.birthday).slice(-5);
     for (let d = 0; d <= 7; d++) {
       const day = addDays(t, d);
@@ -274,7 +279,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Presupuestos pendientes a punto de caducar
-  for (const q of all(
+  for (const q of await all(
     `SELECT * FROM quotes WHERE status = 'pending' AND valid_until BETWEEN ? AND ? ORDER BY valid_until`,
     [t, addDays(t, 3)],
   )) {
@@ -289,7 +294,7 @@ export function getReminders(): Reminder[] {
   }
 
   // Manuales
-  for (const r of all(
+  for (const r of await all(
     `SELECT * FROM reminders WHERE done = 0 AND (due_date IS NULL OR due_date <= ?) ORDER BY due_date`,
     [addDays(t, 1)],
   )) {
@@ -309,7 +314,7 @@ export function getReminders(): Reminder[] {
 }
 
 /** Buscador global. */
-export function search(q: string) {
+export async function search(q: string) {
   const term = q.trim();
   if (!term) return { orders: [], customers: [], products: [], recipes: [], items: [] };
   const norm = term.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -344,9 +349,9 @@ export function search(q: string) {
     conds.push('o.delivery_date = ?');
     params.push(date);
   }
-  const orders = listOrders(`(${conds.join(' OR ')})`, params, 'o.delivery_date DESC LIMIT 25');
+  const orders = await listOrders(`(${conds.join(' OR ')})`, params, 'o.delivery_date DESC LIMIT 25');
 
-  const customers = all(
+  const customers = await all(
     `SELECT c.id, c.name, c.phone, c.email,
             (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id AND o.status <> 'cancelado') AS orders_count
        FROM customers c
@@ -354,12 +359,12 @@ export function search(q: string) {
       ORDER BY c.name LIMIT 15`,
     digits.length >= 3 ? [like, like, `%${digits}%`] : [like, like],
   );
-  const products = all(
+  const products = await all(
     `SELECT id, name, category, photo_id, base_price FROM products WHERE active = 1 AND (norm(name) LIKE ? OR norm(description) LIKE ?) ORDER BY name LIMIT 10`,
     [like, like],
   );
-  const recipes = all(`SELECT id, name, photo_id, servings FROM recipes WHERE norm(name) LIKE ? ORDER BY name LIMIT 10`, [like]);
-  const items = all(
+  const recipes = await all(`SELECT id, name, photo_id, servings FROM recipes WHERE norm(name) LIKE ? ORDER BY name LIMIT 10`, [like]);
+  const items = await all(
     `SELECT id, name, kind, quantity, unit FROM inventory_items WHERE active = 1 AND norm(name) LIKE ? ORDER BY name LIMIT 10`,
     [like],
   );

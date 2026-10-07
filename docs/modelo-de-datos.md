@@ -1,7 +1,7 @@
 # Modelo de datos
 
-Base de datos: **SQLite** (un único fichero `data/obrador.db`). Fácil de copiar,
-de hacer copias de seguridad y de restaurar. Todas las fechas "de negocio"
+Base de datos: **PostgreSQL** (Supabase en internet; PGlite integrado en local), en el
+esquema `obrador`. Las migraciones se aplican solas al arrancar. Todas las fechas "de negocio"
 (entrega, gasto, cobro) se guardan como texto local `YYYY-MM-DD` / `HH:MM`
 en la zona horaria del negocio; las marcas técnicas (`created_at`) en ISO UTC.
 
@@ -83,7 +83,8 @@ Nº de pedidos, dinero gastado y último pedido **se calculan** a partir de `ord
 | `shopping_extras` | Artículos añadidos a mano a la lista de la compra |
 | `shopping_checks` | Artículos marcados "en el carro" de la lista automática |
 | `reminders` | Recordatorios manuales (los automáticos se calculan al vuelo) |
-| `images` | Fotos comprimidas guardadas dentro de la base de datos (así la copia de seguridad es un único fichero) |
+| `images` | Fotos comprimidas guardadas dentro de la base de datos |
+| `backups` | Copias de seguridad (todos los datos en JSON comprimido): automáticas diarias y manuales |
 
 ## Estados del pedido
 

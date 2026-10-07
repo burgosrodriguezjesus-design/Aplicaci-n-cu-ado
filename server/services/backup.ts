@@ -1,99 +1,119 @@
-// Copias de seguridad: automáticas (una al día) y manuales; descarga y restauración.
-import Database from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
-import { closeDb, DATA_DIR, db, dbPath, openDb } from '../db/db.js';
-import { nowLocal, today } from '../lib/clock.js';
-import { badRequest } from '../lib/util.js';
+// Copias de seguridad: instantáneas comprimidas (JSON + gzip) de todos los datos del
+// negocio. Se guardan en la propia base de datos (automática diaria y manuales),
+// se pueden descargar y se pueden restaurar desde la app.
+// Las fotos no van dentro (pesan mucho): se quedan en la base de datos.
+import zlib from 'node:zlib';
+import { all, get, insert, run, tx } from '../db/db.js';
+import { DATA_TABLES, MIGRATIONS } from '../db/schema.js';
+import { nowIso, nowLocal, today } from '../lib/clock.js';
+import { badRequest, notFound } from '../lib/util.js';
 
-export const BACKUP_DIR = path.join(DATA_DIR, 'backups');
-const KEEP_AUTO = 30;
+const KEEP = { auto: 30, other: 20 };
+type Kind = 'auto' | 'manual' | 'antes-de-restaurar';
 
-export function createBackup(label: 'auto' | 'manual' | 'antes-de-restaurar' = 'manual') {
-  fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  const stamp = nowLocal().replace('T', '_').replace(':', '');
-  let name = `copia_${stamp}_${label}.sqlite`;
-  let n = 1;
-  while (fs.existsSync(path.join(BACKUP_DIR, name))) name = `copia_${stamp}_${label}-${n++}.sqlite`;
-  db().prepare('VACUUM INTO ?').run(path.join(BACKUP_DIR, name));
-  prune();
-  return name;
+export async function exportData(): Promise<Buffer> {
+  const tables: Record<string, unknown[]> = {};
+  for (const t of DATA_TABLES) tables[t] = await all(`SELECT * FROM ${t}`);
+  const json = JSON.stringify({ app: 'obrador', schema: MIGRATIONS.length, created_at: nowIso(), tables });
+  return zlib.gzipSync(json);
 }
 
-function prune() {
-  const autos = listBackups().filter((b) => b.name.includes('_auto'));
-  for (const b of autos.slice(KEEP_AUTO)) fs.rmSync(path.join(BACKUP_DIR, b.name), { force: true });
+export async function createBackup(kind: Kind = 'manual') {
+  const data = await exportData();
+  const name = `copia_${nowLocal().replace('T', '_').replace(':', '')}_${kind}`;
+  const id = await insert('backups', { name, kind, size: data.length, data });
+  // Limpieza: se guardan las últimas copias de cada tipo.
+  await run(
+    `DELETE FROM backups WHERE kind = 'auto' AND id NOT IN (SELECT id FROM backups WHERE kind = 'auto' ORDER BY id DESC LIMIT ${KEEP.auto})`,
+  );
+  await run(
+    `DELETE FROM backups WHERE kind <> 'auto' AND id NOT IN (SELECT id FROM backups WHERE kind <> 'auto' ORDER BY id DESC LIMIT ${KEEP.other})`,
+  );
+  return { id, name };
 }
 
 export function listBackups() {
-  if (!fs.existsSync(BACKUP_DIR)) return [];
-  return fs
-    .readdirSync(BACKUP_DIR)
-    .filter((f) => f.endsWith('.sqlite'))
-    .map((name) => {
-      const st = fs.statSync(path.join(BACKUP_DIR, name));
-      return { name, size: st.size, created_at: st.mtime.toISOString() };
-    })
-    .sort((a, b) => b.name.localeCompare(a.name));
+  return all<{ id: number; name: string; kind: string; size: number; created_at: string }>(
+    'SELECT id, name, kind, size, created_at FROM backups ORDER BY id DESC',
+  );
 }
 
-export function backupFile(name: string) {
-  const safe = path.basename(name);
-  const file = path.join(BACKUP_DIR, safe);
-  if (!safe.endsWith('.sqlite') || !fs.existsSync(file)) return null;
-  return file;
+export async function backupData(id: number) {
+  const b = await get<{ name: string; data: Buffer }>('SELECT name, data FROM backups WHERE id = ?', [id]);
+  if (!b) throw notFound('Copia');
+  return b;
 }
 
-/** Copia "al vuelo" del estado actual, para descargar. */
-export function snapshotToTemp() {
-  const tmp = path.join(DATA_DIR, `descarga-${Date.now()}.sqlite`);
-  db().prepare('VACUUM INTO ?').run(tmp);
-  return tmp;
+/** Copia automática del día (si todavía no se ha hecho). */
+export async function dailyBackup() {
+  const done = await get("SELECT id FROM backups WHERE kind = 'auto' AND name LIKE ?", [`copia_${today()}%`]);
+  if (!done) await createBackup('auto');
 }
 
-/** Restaura una copia subida: se valida, se guarda una copia del estado actual y se reemplaza. */
-export function restoreBackup(buffer: Buffer) {
-  if (buffer.subarray(0, 15).toString() !== 'SQLite format 3') throw badRequest('El archivo no es una copia de seguridad válida');
-  const tmp = path.join(DATA_DIR, `restaurar-${Date.now()}.sqlite`);
-  fs.writeFileSync(tmp, buffer);
+function parse(buffer: Buffer) {
+  let text: string;
   try {
-    const test = new Database(tmp, { readonly: true });
-    try {
-      const tables = test.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[];
-      const names = new Set(tables.map((t) => t.name));
-      for (const t of ['users', 'orders', 'customers', 'inventory_items']) {
-        if (!names.has(t)) throw badRequest('El archivo no es una copia de esta aplicación');
-      }
-      const admins = test.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND active = 1").get() as { n: number };
-      if (!admins.n) throw badRequest('La copia no tiene ningún administrador activo');
-    } finally {
-      test.close();
-    }
-    createBackup('antes-de-restaurar');
-    const target = dbPath();
-    closeDb();
-    for (const ext of ['-wal', '-shm']) fs.rmSync(target + ext, { force: true });
-    fs.copyFileSync(tmp, target);
-    openDb(target);
-  } finally {
-    fs.rmSync(tmp, { force: true });
+    text = (buffer[0] === 0x1f && buffer[1] === 0x8b ? zlib.gunzipSync(buffer) : buffer).toString('utf8');
+  } catch {
+    throw badRequest('El archivo no es una copia de seguridad válida');
+  }
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw badRequest('El archivo no es una copia de seguridad válida');
+  }
+  if (data?.app !== 'obrador' || typeof data.tables !== 'object') throw badRequest('El archivo no es una copia de esta aplicación');
+  const users = data.tables.users as any[] | undefined;
+  if (!users?.some((u) => u.role === 'admin' && u.active)) throw badRequest('La copia no tiene ningún administrador activo');
+  return data as { tables: Record<string, Record<string, unknown>[]> };
+}
+
+async function insertRows(table: string, rows: Record<string, unknown>[]) {
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200);
+    const cols = Object.keys(chunk[0]);
+    const params: unknown[] = [];
+    const values = chunk.map((r) => `(${cols.map((c) => (params.push(r[c] ?? null), '?')).join(',')})`);
+    await run(`INSERT INTO ${table} (${cols.join(',')}) VALUES ${values.join(',')}`, params);
   }
 }
 
-let timer: NodeJS.Timeout | null = null;
-
-/** Hace una copia automática al arrancar y cada día. */
-export function scheduleAutoBackups() {
-  const check = () => {
-    try {
-      const day = today();
-      const done = listBackups().some((b) => b.name.startsWith(`copia_${day}`) && b.name.includes('_auto'));
-      if (!done) createBackup('auto');
-    } catch (e) {
-      console.error('Error en la copia automática', e);
+/**
+ * Sustituye todos los datos por los de la copia. Antes guarda una copia del estado actual.
+ * `keepSession` vuelve a dejar abierta la sesión de quien restaura (si su usuario existe en la copia).
+ */
+export async function restoreData(buffer: Buffer, keepSession?: { tokenHash: string; userId: number; expires: string }) {
+  const data = parse(buffer);
+  await createBackup('antes-de-restaurar');
+  await tx(async () => {
+    await run(`TRUNCATE ${[...DATA_TABLES, 'sessions'].join(', ')} RESTART IDENTITY CASCADE`);
+    const images = new Set((await all<{ id: number }>('SELECT id FROM images')).map((r) => r.id));
+    const quoteOrders: [number, number][] = [];
+    for (const table of DATA_TABLES) {
+      let rows = (data.tables[table] ?? []).map((r) => ({ ...r }));
+      // Las fotos que ya no existan se quitan de la ficha.
+      if (table === 'recipes' || table === 'products') rows.forEach((r) => r.photo_id && !images.has(r.photo_id as number) && (r.photo_id = null));
+      if (table === 'order_images') rows = rows.filter((r) => images.has(r.image_id as number));
+      // Presupuesto ↔ pedido se enlazan cuando ya existen los pedidos.
+      if (table === 'quotes') {
+        rows.forEach((r) => {
+          if (r.order_id) quoteOrders.push([r.id as number, r.order_id as number]);
+          r.order_id = null;
+        });
+      }
+      if (rows.length) await insertRows(table, rows);
+      if (rows.length && 'id' in rows[0]) {
+        await run(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), (SELECT COALESCE(MAX(id), 0) + 1 FROM ${table}), false)`);
+      }
     }
-  };
-  check();
-  timer = setInterval(check, 60 * 60 * 1000);
-  timer.unref();
+    for (const [q, o] of quoteOrders) await run('UPDATE quotes SET order_id = ? WHERE id = ?', [o, q]);
+    if (keepSession && (await get('SELECT id FROM users WHERE id = ? AND active = 1', [keepSession.userId]))) {
+      await run('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)', [
+        keepSession.tokenHash,
+        keepSession.userId,
+        keepSession.expires,
+      ]);
+    }
+  });
 }

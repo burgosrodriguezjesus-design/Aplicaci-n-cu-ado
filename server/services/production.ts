@@ -6,25 +6,25 @@ import { Catalog, describeRequirements, requirementsForOrders } from './catalog.
 import { PAID_SQL, prodDateSql } from './orders.js';
 import { STAGES, STAGE_LABELS, type Stage } from '../../shared/constants.js';
 
-export function getProduction(date: string) {
+export async function getProduction(date: string) {
   const isToday = date === today();
   const pd = prodDateSql('o');
 
   // Pedidos que se fabrican este día (y, si es hoy, los que se han quedado atrás).
-  const prodOrders = all(
+  const prodOrders = await all(
     `SELECT o.*, ${pd} AS production_day FROM orders o
       WHERE o.status NOT IN ('nuevo','cancelado')
-        AND (${pd} = ? OR (? AND ${pd} < ? AND o.status IN ('confirmado','pendiente','en_preparacion')))
+        AND (${pd} = ? ${isToday ? `OR (${pd} < ? AND o.status IN ('confirmado','pendiente','en_preparacion'))` : ''})
       ORDER BY o.delivery_date, o.delivery_time`,
-    [date, isToday ? 1 : 0, date],
+    isToday ? [date, date] : [date],
   );
   // Pedidos que se entregan este día (y, si es hoy, los atrasados sin entregar).
-  const deliveryOrders = all(
+  const deliveryOrders = await all(
     `SELECT o.*, ${PAID_SQL} AS paid FROM orders o
       WHERE o.status NOT IN ('nuevo','cancelado')
-        AND (o.delivery_date = ? OR (? AND o.delivery_date < ? AND o.status <> 'entregado'))
+        AND (o.delivery_date = ? ${isToday ? `OR (o.delivery_date < ? AND o.status <> 'entregado')` : ''})
       ORDER BY o.delivery_date, o.delivery_time`,
-    [date, isToday ? 1 : 0, date],
+    isToday ? [date, date] : [date],
   );
   const prodIds = new Set(prodOrders.map((o) => o.id));
   const delIds = new Set(deliveryOrders.map((o) => o.id));
@@ -32,7 +32,7 @@ export function getProduction(date: string) {
 
   const ids = [...orderMap.keys()];
   const tasks = ids.length
-    ? all(
+    ? await all(
         `SELECT t.*, oi.flavor, oi.filling, oi.coverage, oi.decoration, oi.custom_text, oi.notes AS item_notes,
                 oi.servings, oi.quantity, oi.product_name, oi.size_name, u.name AS done_by_name
            FROM production_tasks t
@@ -79,7 +79,7 @@ export function getProduction(date: string) {
 
   // Resumen "HOY HAY QUE PREPARAR"
   const items = prodIds.size
-    ? all(
+    ? await all(
         `SELECT oi.product_name, oi.size_name, oi.flavor, oi.quantity, oi.order_id, p.unit_label, p.category
            FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id
           WHERE oi.order_id IN (${[...prodIds].map(() => '?').join(',')})`,
@@ -109,14 +109,14 @@ export function getProduction(date: string) {
   const summary = [...summaryMap.values()].sort((a, b) => b.quantity - a.quantity);
 
   // Ingredientes que aún hay que usar (pedidos sin descontar).
-  const cat = new Catalog();
+  const cat = await Catalog.load();
   const pendingIds = prodOrders.filter((o) => !o.stock_consumed_at).map((o) => o.id);
-  const { req } = requirementsForOrders(pendingIds, cat);
+  const { req } = await requirementsForOrders(pendingIds, cat);
   const requirements = describeRequirements(req, cat).map(({ cost: _c, ...r }) => r);
 
-  const unconfirmed = all(
+  const unconfirmed = await all(
     `SELECT id, number, customer_name, delivery_date, delivery_time FROM orders
-      WHERE status = 'nuevo' AND delivery_date <= date(?, '+2 days') AND delivery_date >= ?
+      WHERE status = 'nuevo' AND delivery_date <= to_char(?::date + 2, 'YYYY-MM-DD') AND delivery_date >= ?
       ORDER BY delivery_date, delivery_time`,
     [date, isToday ? '0000-00-00' : date],
   );

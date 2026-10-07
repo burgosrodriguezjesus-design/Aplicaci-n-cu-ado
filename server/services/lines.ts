@@ -55,8 +55,8 @@ export interface Line {
 type LineTable = 'order_items' | 'quote_items';
 const FK: Record<LineTable, string> = { order_items: 'order_id', quote_items: 'quote_id' };
 
-export function loadLines(table: LineTable, parentId: number): Line[] {
-  return all(`SELECT * FROM ${table} WHERE ${FK[table]} = ? ORDER BY sort, id`, [parentId]).map((r) => ({
+export async function loadLines(table: LineTable, parentId: number): Promise<Line[]> {
+  return (await all(`SELECT * FROM ${table} WHERE ${FK[table]} = ? ORDER BY sort, id`, [parentId])).map((r) => ({
     ...r,
     extras: parseJson<Extra[]>(r.extras, []),
   }));
@@ -103,22 +103,20 @@ export function linesTotal(lines: { line_total: number }[]) {
  * Guarda las líneas conservando los id existentes (así las tareas de producción
  * ya marcadas no se pierden al editar el pedido).
  */
-export function saveLines(table: LineTable, parentId: number, lines: ReturnType<typeof normalizeLines>) {
+export async function saveLines(table: LineTable, parentId: number, lines: ReturnType<typeof normalizeLines>) {
   const fk = FK[table];
-  const existing = new Set(
-    all<{ id: number }>(`SELECT id FROM ${table} WHERE ${fk} = ?`, [parentId]).map((r) => r.id),
-  );
+  const existing = new Set((await all<{ id: number }>(`SELECT id FROM ${table} WHERE ${fk} = ?`, [parentId])).map((r) => r.id));
   const keep = new Set<number>();
   for (const l of lines) {
     const { id, ...data } = l;
     if (id && existing.has(id)) {
-      update(table, id, data);
+      await update(table, id, data);
       keep.add(id);
     } else {
-      keep.add(insert(table, { ...data, [fk]: parentId }));
+      keep.add(await insert(table, { ...data, [fk]: parentId }));
     }
   }
-  for (const id of existing) if (!keep.has(id)) run(`DELETE FROM ${table} WHERE id = ?`, [id]);
+  for (const id of existing) if (!keep.has(id)) await run(`DELETE FROM ${table} WHERE id = ?`, [id]);
 }
 
 export function computeTotal(subtotal: number, deliveryType: string, deliveryFee: number, discount: number) {

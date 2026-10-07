@@ -45,13 +45,13 @@ export function quoteStatus(q: { status: string; valid_until: string }) {
   return q.status === 'pending' && q.valid_until < today() ? 'expired' : q.status;
 }
 
-export function saveQuote(raw: unknown, userId: number | null, id?: number) {
+export async function saveQuote(raw: unknown, userId: number | null, id?: number) {
   const input = quoteSchema.parse(raw);
-  return tx(() => {
-    const cat = new Catalog();
+  return tx(async () => {
+    const cat = await Catalog.load();
     const lines = normalizeLines(input.items, cat);
     const total = computeTotal(linesTotal(lines), input.delivery_type, input.delivery_fee, input.discount);
-    const customerId = resolveCustomer({
+    const customerId = await resolveCustomer({
       customer_id: input.customer_id,
       name: input.customer_name,
       phone: input.customer_phone,
@@ -76,35 +76,37 @@ export function saveQuote(raw: unknown, userId: number | null, id?: number) {
       notes: input.notes ?? null,
     };
     if (id) {
-      const q = get('SELECT * FROM quotes WHERE id = ?', [id]);
+      const q = await get('SELECT * FROM quotes WHERE id = ?', [id]);
       if (!q) throw notFound('Presupuesto');
       if (q.status === 'accepted') throw badRequest('Este presupuesto ya se convirtió en pedido; edita el pedido.');
-      update('quotes', id, { ...row, updated_at: nowIso() });
+      await update('quotes', id, { ...row, updated_at: nowIso() });
     } else {
-      id = insert('quotes', { ...row, number: nextNumber('quotes'), created_by: userId });
+      id = await insert('quotes', { ...row, number: await nextNumber('quotes'), created_by: userId });
     }
-    saveLines('quote_items', id!, lines);
+    await saveLines('quote_items', id!, lines);
     return id!;
   });
 }
 
-export function listQuotes() {
-  return all(
-    `SELECT q.*, (SELECT GROUP_CONCAT(qi.product_name, ' · ') FROM quote_items qi WHERE qi.quote_id = q.id) AS summary,
+export async function listQuotes() {
+  return (
+    await all(
+    `SELECT q.*, (SELECT string_agg(qi.product_name, ' · ' ORDER BY qi.sort) FROM quote_items qi WHERE qi.quote_id = q.id) AS summary,
             o.number AS order_number
        FROM quotes q LEFT JOIN orders o ON o.id = q.order_id
       ORDER BY q.date DESC, q.id DESC`,
+    )
   ).map((q) => ({ ...q, allergens: parseJson(q.allergens, []), status: quoteStatus(q) }));
 }
 
-export function getQuote(id: number) {
-  const q = get(
+export async function getQuote(id: number) {
+  const q = await get(
     `SELECT q.*, o.number AS order_number FROM quotes q LEFT JOIN orders o ON o.id = q.order_id WHERE q.id = ?`,
     [id],
   );
   if (!q) throw notFound('Presupuesto');
-  const cat = new Catalog();
-  const items = loadLines('quote_items', id).map((l) => ({
+  const cat = await Catalog.load();
+  const items = (await loadLines('quote_items', id)).map((l) => ({
     ...l,
     contains: l.product_id ? productAllergens(cat, l.product_id) : [],
   }));
@@ -112,11 +114,11 @@ export function getQuote(id: number) {
   return { ...q, allergens: parseJson(q.allergens, []), status: quoteStatus(q), raw_status: q.status, items, subtotal };
 }
 
-export function setQuoteStatus(id: number, status: 'pending' | 'accepted' | 'rejected') {
-  const q = get('SELECT * FROM quotes WHERE id = ?', [id]);
+export async function setQuoteStatus(id: number, status: 'pending' | 'accepted' | 'rejected') {
+  const q = await get('SELECT * FROM quotes WHERE id = ?', [id]);
   if (!q) throw notFound('Presupuesto');
   if (q.order_id && status !== 'accepted') throw badRequest('Ya se convirtió en pedido');
-  run('UPDATE quotes SET status = ?, updated_at = ? WHERE id = ?', [status, nowIso(), id]);
+  await run('UPDATE quotes SET status = ?, updated_at = ? WHERE id = ?', [status, nowIso(), id]);
 }
 
 export const convertSchema = z.object({
@@ -126,14 +128,14 @@ export const convertSchema = z.object({
 });
 
 /** Convierte un presupuesto aceptado en pedido confirmado. */
-export function convertQuote(id: number, raw: unknown, userId: number | null) {
+export async function convertQuote(id: number, raw: unknown, userId: number | null) {
   const input = convertSchema.parse(raw ?? {});
-  return tx(() => {
-    const q = getQuote(id);
+  return tx(async () => {
+    const q = await getQuote(id);
     if (q.order_id) return q.order_id as number;
     const deliveryDate = input.delivery_date ?? q.delivery_date;
     if (!deliveryDate) throw badRequest('Indica la fecha de entrega para crear el pedido');
-    const orderId = createOrder(
+    const orderId = await createOrder(
       {
         customer_id: q.customer_id,
         customer_name: q.customer_name,
@@ -167,12 +169,12 @@ export function convertQuote(id: number, raw: unknown, userId: number | null) {
       },
       userId,
     );
-    run('UPDATE quotes SET status = ?, order_id = ?, updated_at = ? WHERE id = ?', ['accepted', orderId, nowIso(), id]);
+    await run('UPDATE quotes SET status = ?, order_id = ?, updated_at = ? WHERE id = ?', ['accepted', orderId, nowIso(), id]);
     return orderId;
   });
 }
 
-export function deleteQuote(id: number) {
-  run('DELETE FROM quotes WHERE id = ?', [id]);
+export async function deleteQuote(id: number) {
+  await run('DELETE FROM quotes WHERE id = ?', [id]);
 }
 

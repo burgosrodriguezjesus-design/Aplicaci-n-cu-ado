@@ -48,8 +48,9 @@ function fail(key: string) {
 
 authRouter.get(
   '/status',
-  h((req) => ({
-    needs_setup: usersCount() === 0,
+  h(async (req) => ({
+    needs_setup: (await usersCount()) === 0,
+    setup_code_required: !!process.env.SETUP_CODE,
     user: req.user ?? null,
     business_name: getSettings().business_name,
   })),
@@ -61,34 +62,40 @@ const setupSchema = z.object({
   username: z.string().trim().min(3, 'El usuario debe tener al menos 3 letras').max(50),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   demo: z.boolean().default(false),
+  setup_code: z.string().optional(),
 });
 
 authRouter.post(
   '/setup',
-  h((req, res) => {
-    if (usersCount() > 0) throw badRequest('La aplicación ya está configurada');
+  h(async (req, res) => {
+    if ((await usersCount()) > 0) throw badRequest('La aplicación ya está configurada');
     const input = setupSchema.parse(req.body);
-    const userId = tx(() => {
-      const id = createUser({ name: input.name, username: input.username, password: input.password, role: 'admin' });
-      saveSettings({ business_name: input.business_name });
-      if (input.demo) seedDemo(id);
-      else seedBasics();
+    // En internet, solo quien tenga el código de instalación puede crear el administrador.
+    if (process.env.SETUP_CODE && input.setup_code?.trim() !== process.env.SETUP_CODE) {
+      throw new HttpError(403, 'El código de instalación no es correcto');
+    }
+    const userId = await tx(async () => {
+      if ((await usersCount()) > 0) throw badRequest('La aplicación ya está configurada');
+      const id = await createUser({ name: input.name, username: input.username, password: input.password, role: 'admin' });
+      await saveSettings({ business_name: input.business_name });
+      if (input.demo) await seedDemo(id);
+      else await seedBasics();
       return id;
     });
-    setCookie(req, res, createSession(userId));
+    setCookie(req, res, await createSession(userId));
     return { ok: true };
   }),
 );
 
 authRouter.post(
   '/login',
-  h((req, res) => {
+  h(async (req, res) => {
     const { username, password } = z
       .object({ username: z.string().min(1, 'Escribe tu usuario'), password: z.string().min(1, 'Escribe tu contraseña') })
       .parse(req.body);
     const key = `${req.ip}|${username.toLowerCase()}`;
     checkRate(key);
-    const r = login(username, password);
+    const r = await login(username, password);
     if (!r) {
       fail(key);
       throw new HttpError(401, 'Usuario o contraseña incorrectos');
@@ -101,8 +108,8 @@ authRouter.post(
 
 authRouter.post(
   '/logout',
-  h((req, res) => {
-    logout(req.cookies?.[COOKIE]);
+  h(async (req, res) => {
+    await logout(req.cookies?.[COOKIE]);
     res.clearCookie(COOKIE, { path: '/' });
     return { ok: true };
   }),
@@ -117,8 +124,8 @@ authRouter.get(
 authRouter.post(
   '/password',
   requireAuth,
-  h((req) => {
+  h(async (req) => {
     const { current, next } = z.object({ current: z.string(), next: z.string() }).parse(req.body);
-    changePassword(req.user!.id, current, next);
+    await changePassword(req.user!.id, current, next);
   }),
 );

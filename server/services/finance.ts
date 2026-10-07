@@ -30,7 +30,7 @@ export const directSaleSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
-export function registerDirectSale(raw: unknown, userId: number | null) {
+export async function registerDirectSale(raw: unknown, userId: number | null) {
   const input = directSaleSchema.parse(raw);
   const stamp = input.date && input.date !== today() ? `${input.date}T12:00` : nowLocal();
   return insert('payments', {
@@ -47,23 +47,23 @@ export function registerDirectSale(raw: unknown, userId: number | null) {
 const DELIVERED_DAY = `COALESCE(substr(o.delivered_at, 1, 10), o.delivery_date)`;
 
 /** Facturado en un rango: pedidos entregados + ventas directas + señales retenidas de cancelados. */
-export function revenueBetween(from: string, to: string) {
-  const orders = get<{ n: number; total: number }>(
+export async function revenueBetween(from: string, to: string) {
+  const orders = (await get<{ n: number; total: number }>(
     `SELECT COUNT(*) AS n, COALESCE(SUM(o.total), 0) AS total FROM orders o
       WHERE o.status = 'entregado' AND ${DELIVERED_DAY} BETWEEN ? AND ?`,
     [from, to],
-  )!;
-  const direct = get<{ total: number }>(
+  ))!;
+  const direct = (await get<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM payments
       WHERE kind = 'direct_sale' AND substr(paid_at, 1, 10) BETWEEN ? AND ?`,
     [from, to],
-  )!;
-  const kept = get<{ total: number }>(
+  ))!;
+  const kept = (await get<{ total: number }>(
     `SELECT COALESCE(SUM(CASE WHEN p.kind = 'refund' THEN -p.amount ELSE p.amount END), 0) AS total
        FROM payments p JOIN orders o ON o.id = p.order_id
       WHERE o.status = 'cancelado' AND substr(p.paid_at, 1, 10) BETWEEN ? AND ?`,
     [from, to],
-  )!;
+  ))!;
   return {
     orders_count: orders.n,
     orders: round2(orders.total),
@@ -73,50 +73,47 @@ export function revenueBetween(from: string, to: string) {
   };
 }
 
-export function expensesBetween(from: string, to: string) {
-  return round2(
-    get<{ total: number }>('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE date BETWEEN ? AND ?', [from, to])!
-      .total,
-  );
+export async function expensesBetween(from: string, to: string) {
+  const r = await get<{ total: number }>('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE date BETWEEN ? AND ?', [from, to]);
+  return round2(r!.total);
 }
 
-export function collectedBetween(from: string, to: string) {
-  return round2(
-    get<{ total: number }>(
-      `SELECT COALESCE(SUM(CASE WHEN kind = 'refund' THEN -amount ELSE amount END), 0) AS total
-         FROM payments WHERE substr(paid_at, 1, 10) BETWEEN ? AND ?`,
-      [from, to],
-    )!.total,
+export async function collectedBetween(from: string, to: string) {
+  const r = await get<{ total: number }>(
+    `SELECT COALESCE(SUM(CASE WHEN kind = 'refund' THEN -amount ELSE amount END), 0) AS total
+       FROM payments WHERE substr(paid_at, 1, 10) BETWEEN ? AND ?`,
+    [from, to],
   );
+  return round2(r!.total);
 }
 
 /** Dinero pendiente de cobrar de todos los pedidos no cancelados. */
-export function pendingToCollect() {
-  const r = get<{ total: number; n: number }>(
-    `SELECT COALESCE(SUM(MAX(o.total - ${PAID_SQL}, 0)), 0) AS total,
+export async function pendingToCollect() {
+  const r = (await get<{ total: number; n: number }>(
+    `SELECT COALESCE(SUM(GREATEST(o.total - ${PAID_SQL}, 0)), 0) AS total,
             COALESCE(SUM(CASE WHEN o.total - ${PAID_SQL} > 0.005 THEN 1 ELSE 0 END), 0) AS n
        FROM orders o WHERE o.status <> 'cancelado'`,
-  )!;
+  ))!;
   return { total: round2(r.total), orders: r.n };
 }
 
-export function monthSummary(month: string) {
+export async function monthSummary(month: string) {
   const { from, to } = monthRange(month);
-  const revenue = revenueBetween(from, to);
-  const expenses = expensesBetween(from, to);
-  const collected = collectedBetween(from, to);
-  const byCategory = all(
-    `SELECT category, ROUND(SUM(amount), 2) AS amount FROM expenses WHERE date BETWEEN ? AND ?
+  const revenue = await revenueBetween(from, to);
+  const expenses = await expensesBetween(from, to);
+  const collected = await collectedBetween(from, to);
+  const byCategory = await all(
+    `SELECT category, ROUND(SUM(amount)::numeric, 2) AS amount FROM expenses WHERE date BETWEEN ? AND ?
       GROUP BY category ORDER BY amount DESC`,
     [from, to],
   );
-  const byMethod = all(
-    `SELECT method, ROUND(SUM(CASE WHEN kind = 'refund' THEN -amount ELSE amount END), 2) AS amount
+  const byMethod = await all(
+    `SELECT method, ROUND(SUM(CASE WHEN kind = 'refund' THEN -amount ELSE amount END)::numeric, 2) AS amount
        FROM payments WHERE substr(paid_at, 1, 10) BETWEEN ? AND ? GROUP BY method ORDER BY amount DESC`,
     [from, to],
   );
-  const topProducts = all(
-    `SELECT oi.product_name AS name, SUM(oi.quantity) AS quantity, ROUND(SUM(oi.line_total), 2) AS revenue
+  const topProducts = await all(
+    `SELECT oi.product_name AS name, SUM(oi.quantity) AS quantity, ROUND(SUM(oi.line_total)::numeric, 2) AS revenue
        FROM order_items oi JOIN orders o ON o.id = oi.order_id
       WHERE o.status = 'entregado' AND ${DELIVERED_DAY} BETWEEN ? AND ?
       GROUP BY oi.product_name ORDER BY revenue DESC LIMIT 8`,
@@ -132,36 +129,36 @@ export function monthSummary(month: string) {
     profit: round2(revenue.total - expenses),
     cash_flow: round2(collected - expenses),
     avg_ticket: revenue.orders_count ? round2(revenue.orders / revenue.orders_count) : 0,
-    pending: pendingToCollect(),
+    pending: await pendingToCollect(),
     expenses_by_category: byCategory,
     collected_by_method: byMethod,
     top_products: topProducts,
   };
 }
 
-export function history(months = 12, endMonth = today().slice(0, 7)) {
+export async function history(months = 12, endMonth = today().slice(0, 7)) {
   const out = [];
   for (let i = months - 1; i >= 0; i--) {
     const m = addMonths(endMonth, -i);
     const { from, to } = monthRange(m);
-    const revenue = revenueBetween(from, to).total;
-    const expenses = expensesBetween(from, to);
+    const revenue = (await revenueBetween(from, to)).total;
+    const expenses = await expensesBetween(from, to);
     out.push({ month: m, revenue, expenses, profit: round2(revenue - expenses) });
   }
   return out;
 }
 
 /** Movimientos de caja del mes: cobros, ventas directas y gastos. */
-export function movements(month: string) {
+export async function movements(month: string) {
   const { from, to } = monthRange(month);
-  const pays = all(
+  const pays = await all(
     `SELECT p.id, 'payment' AS source, p.kind, p.amount, p.method, p.description, p.paid_at AS date,
             o.id AS order_id, o.number AS order_number, o.customer_name
        FROM payments p LEFT JOIN orders o ON o.id = p.order_id
       WHERE substr(p.paid_at, 1, 10) BETWEEN ? AND ?`,
     [from, to],
   );
-  const exps = all(
+  const exps = await all(
     `SELECT e.id, 'expense' AS source, e.category AS kind, e.amount, e.payment_method AS method, e.description,
             e.date, e.supplier,
             (SELECT COUNT(*) FROM inventory_movements m WHERE m.expense_id = e.id) AS stock_lines

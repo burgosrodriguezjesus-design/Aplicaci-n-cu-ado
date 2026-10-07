@@ -2,7 +2,8 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ZodError } from 'zod';
 import { HttpError, forbidden } from './lib/util.js';
 import { sessionUser, type SessionUser } from './services/auth.js';
-import { getSettings } from './services/settings.js';
+import { getSettings, loadSettings } from './services/settings.js';
+import { ensureDb } from './db/db.js';
 import type { Permission } from '../shared/constants.js';
 
 declare module 'express-serve-static-core' {
@@ -28,9 +29,16 @@ export function h(fn: (req: Request, res: Response) => unknown): RequestHandler 
   };
 }
 
-export function loadUser(req: Request, _res: Response, next: NextFunction) {
-  req.user = sessionUser(req.cookies?.[COOKIE]) ?? undefined;
-  next();
+/** Al empezar cada petición: base de datos lista, configuración al día y usuario de la sesión. */
+export async function loadUser(req: Request, _res: Response, next: NextFunction) {
+  try {
+    await ensureDb();
+    await loadSettings();
+    req.user = (await sessionUser(req.cookies?.[COOKIE])) ?? undefined;
+    next();
+  } catch (e) {
+    next(e);
+  }
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -89,7 +97,8 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(413).json({ error: 'El archivo es demasiado grande' });
     return;
   }
-  if (typeof e?.code === 'string' && e.code.startsWith('SQLITE_CONSTRAINT')) {
+  // 23xxx: violación de restricciones en Postgres (duplicados, claves foráneas…)
+  if (typeof e?.code === 'string' && e.code.startsWith('23')) {
     res.status(400).json({ error: 'No se puede guardar: hay datos relacionados o duplicados' });
     return;
   }

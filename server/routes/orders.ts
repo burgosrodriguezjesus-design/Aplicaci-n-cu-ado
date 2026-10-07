@@ -33,8 +33,8 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
 ordersRouter.get(
   '/orders',
-  h((req) => {
-    runAutomations();
+  h(async (req) => {
+    await runAutomations();
     const q = req.query as Record<string, string | undefined>;
     const where: string[] = [];
     const params: unknown[] = [];
@@ -104,46 +104,46 @@ ordersRouter.get(
 
 ordersRouter.get(
   '/orders/:id',
-  h((req) => {
-    runAutomations();
+  h(async (req) => {
+    await runAutomations();
     return getOrderFull(toId(req.params.id), { costs: can(req, 'perm_costs') });
   }),
 );
 
 ordersRouter.post(
   '/orders',
-  h((req) => {
-    const id = createOrder(req.body, req.user!.id);
+  h(async (req) => {
+    const id = await createOrder(req.body, req.user!.id);
     return getOrderFull(id, { costs: can(req, 'perm_costs') });
   }),
 );
 
 ordersRouter.put(
   '/orders/:id',
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
-    updateOrder(id, req.body, req.user!.id);
+    await updateOrder(id, req.body, req.user!.id);
     return getOrderFull(id, { costs: can(req, 'perm_costs') });
   }),
 );
 
 ordersRouter.patch(
   '/orders/:id/status',
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
     const { status } = z.object({ status: z.enum(ORDER_STATUSES) }).parse(req.body);
-    setStatus(id, status, req.user!.id);
+    await setStatus(id, status, req.user!.id);
     return getOrderFull(id, { costs: can(req, 'perm_costs') });
   }),
 );
 
 ordersRouter.post(
   '/orders/:id/duplicate',
-  h((req) => {
+  h(async (req) => {
     const { delivery_date } = z
       .object({ delivery_date: z.string().regex(dateRe).optional() })
       .parse(req.body ?? {});
-    return { id: duplicateOrder(toId(req.params.id), req.user!.id, delivery_date) };
+    return { id: await duplicateOrder(toId(req.params.id), req.user!.id, delivery_date) };
   }),
 );
 
@@ -155,23 +155,23 @@ ordersRouter.delete(
 
 ordersRouter.post(
   '/orders/:id/payments',
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
-    addPayment(id, req.body, req.user!.id);
+    await addPayment(id, req.body, req.user!.id);
     return getOrderFull(id, { costs: can(req, 'perm_costs') });
   }),
 );
 
 ordersRouter.delete(
   '/payments/:id',
-  h((req) => {
-    const p = get('SELECT * FROM payments WHERE id = ?', [toId(req.params.id)]);
+  h(async (req) => {
+    const p = await get('SELECT * FROM payments WHERE id = ?', [toId(req.params.id)]);
     if (!p) throw notFound('Pago');
     // Los empleados pueden corregir un cobro del mismo día; el resto, solo con permiso de borrar.
     if (!can(req, 'perm_delete') && !(p.user_id === req.user!.id && p.paid_at.slice(0, 10) === today())) {
       throw forbidden('Solo puedes borrar los cobros que has registrado hoy');
     }
-    run('DELETE FROM payments WHERE id = ?', [p.id]);
+    await run('DELETE FROM payments WHERE id = ?', [p.id]);
   }),
 );
 
@@ -181,8 +181,8 @@ ordersRouter.delete(
 
 ordersRouter.get(
   '/production',
-  h((req) => {
-    runAutomations();
+  h(async (req) => {
+    await runAutomations();
     const date = typeof req.query.date === 'string' && dateRe.test(req.query.date) ? req.query.date : today();
     return getProduction(date);
   }),
@@ -202,22 +202,22 @@ ordersRouter.patch(
 
 ordersRouter.get('/quotes', h(() => listQuotes()));
 ordersRouter.get('/quotes/:id', h((req) => getQuote(toId(req.params.id))));
-ordersRouter.post('/quotes', h((req) => getQuote(saveQuote(req.body, req.user!.id))));
+ordersRouter.post('/quotes', h(async (req) => getQuote(await saveQuote(req.body, req.user!.id))));
 ordersRouter.put(
   '/quotes/:id',
-  h((req) => getQuote(saveQuote(req.body, req.user!.id, toId(req.params.id)))),
+  h(async (req) => getQuote(await saveQuote(req.body, req.user!.id, toId(req.params.id)))),
 );
 ordersRouter.patch(
   '/quotes/:id/status',
-  h((req) => {
+  h(async (req) => {
     const { status } = z.object({ status: z.enum(['pending', 'accepted', 'rejected']) }).parse(req.body);
-    setQuoteStatus(toId(req.params.id), status);
+    await setQuoteStatus(toId(req.params.id), status);
     return getQuote(toId(req.params.id));
   }),
 );
 ordersRouter.post(
   '/quotes/:id/convert',
-  h((req) => ({ order_id: convertQuote(toId(req.params.id), req.body, req.user!.id) })),
+  h(async (req) => ({ order_id: await convertQuote(toId(req.params.id), req.body, req.user!.id) })),
 );
 ordersRouter.delete(
   '/quotes/:id',

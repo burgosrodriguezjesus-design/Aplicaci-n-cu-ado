@@ -79,7 +79,7 @@ describe('ciclo de vida de un pedido', () => {
   it('automatiza tareas, stock, cobros y venta', async () => {
     const { admin } = await freshApp();
     const { id, productId, sizes } = await catalogBasics(admin);
-    const stock = (name: string) => get('SELECT quantity FROM inventory_items WHERE id = ?', [id(name)]).quantity;
+    const stock = async (name: string) => (await get('SELECT quantity FROM inventory_items WHERE id = ?', [id(name)])).quantity;
 
     // Crear pedido con señal
     const created = await admin
@@ -126,16 +126,16 @@ describe('ciclo de vida de un pedido', () => {
     expect(prod.summary[0]).toMatchObject({ product_name: 'Tarta base', quantity: 1 });
 
     // Marcar la primera tarea → en preparación y descuenta stock
-    const harinaAntes = stock('Harina de trigo');
+    const harinaAntes = await stock('Harina de trigo');
     const prep = auto.tasks.find((t: any) => t.stage === 'preparar');
     expect((await admin.patch(`/api/production/tasks/${prep.id}`).send({ done: true }).expect(200)).body.status).toBe('en_preparacion');
-    expect(stock('Harina de trigo')).toBeCloseTo(harinaAntes - 0.8);
-    expect(stock('Huevos')).toBeCloseTo(22);
-    expect(stock('Caja tarta grande')).toBeCloseTo(3);
+    expect(await stock('Harina de trigo')).toBeCloseTo(harinaAntes - 0.8);
+    expect(await stock('Huevos')).toBeCloseTo(22);
+    expect(await stock('Caja tarta grande')).toBeCloseTo(3);
 
     // Volver atrás devuelve los ingredientes
     await admin.patch(`/api/orders/${o.id}/status`).send({ status: 'pendiente' }).expect(200);
-    expect(stock('Harina de trigo')).toBeCloseTo(harinaAntes);
+    expect(await stock('Harina de trigo')).toBeCloseTo(harinaAntes);
 
     // Completar todas las tareas de producción → terminado
     const tasks = (await admin.get(`/api/orders/${o.id}`)).body.tasks;
@@ -143,7 +143,7 @@ describe('ciclo de vida de un pedido', () => {
       await admin.patch(`/api/production/tasks/${t.id}`).send({ done: true }).expect(200);
     }
     expect((await admin.get(`/api/orders/${o.id}`)).body.status).toBe('terminado');
-    expect(stock('Huevos')).toBeCloseTo(22);
+    expect(await stock('Huevos')).toBeCloseTo(22);
 
     // Cobro del resto y entrega → venta registrada
     await admin.post(`/api/orders/${o.id}/payments`).send({ amount: 35, method: 'efectivo' }).expect(200);
@@ -160,7 +160,7 @@ describe('ciclo de vida de un pedido', () => {
   it('edita un pedido en preparación recalculando el stock descontado', async () => {
     const { admin } = await freshApp();
     const { id, productId, sizes } = await catalogBasics(admin);
-    const stock = (name: string) => get('SELECT quantity FROM inventory_items WHERE id = ?', [id(name)]).quantity;
+    const stock = async (name: string) => (await get('SELECT quantity FROM inventory_items WHERE id = ?', [id(name)])).quantity;
     const body = {
       customer_name: 'Javi',
       delivery_date: '2026-10-08',
@@ -168,12 +168,12 @@ describe('ciclo de vida de un pedido', () => {
       items: [{ product_id: productId, size_id: sizes[0].id, quantity: 1 }],
     };
     const o = (await admin.post('/api/orders').send(body).expect(200)).body;
-    expect(stock('Huevos')).toBeCloseTo(26);
+    expect(await stock('Huevos')).toBeCloseTo(26);
     await admin
       .put(`/api/orders/${o.id}`)
       .send({ ...body, items: [{ id: o.items[0].id, product_id: productId, size_id: sizes[0].id, quantity: 2 }] })
       .expect(200);
-    expect(stock('Huevos')).toBeCloseTo(22);
+    expect(await stock('Huevos')).toBeCloseTo(22);
     const again = (await admin.get(`/api/orders/${o.id}`)).body;
     expect(again.total).toBe(60);
     // Las tareas conservan su identidad (no se pierden las marcadas)
@@ -206,14 +206,14 @@ describe('lista de la compra', () => {
       .post('/api/shopping/purchase')
       .send({ lines: [{ item_id: id('Huevos'), quantity: 12, total_cost: 3.6 }], supplier: 'Granja' })
       .expect(200);
-    expect(get('SELECT quantity FROM inventory_items WHERE id = ?', [id('Huevos')]).quantity).toBeCloseTo(42);
-    expect(get('SELECT cost_per_unit FROM inventory_items WHERE id = ?', [id('Huevos')]).cost_per_unit).toBeCloseTo(0.3);
-    const exp = get('SELECT * FROM expenses WHERE id = ?', [purchase.body.expense_ids[0]]);
+    expect((await get('SELECT quantity FROM inventory_items WHERE id = ?', [id('Huevos')])).quantity).toBeCloseTo(42);
+    expect((await get('SELECT cost_per_unit FROM inventory_items WHERE id = ?', [id('Huevos')])).cost_per_unit).toBeCloseTo(0.3);
+    const exp = await get('SELECT * FROM expenses WHERE id = ?', [purchase.body.expense_ids[0]]);
     expect(exp).toMatchObject({ category: 'ingredientes', amount: 3.6 });
     expect((await admin.get('/api/shopping')).body.items.find((i: any) => i.name === 'Huevos')).toBeUndefined();
     // Deshacer la compra quita también el stock
     await admin.delete(`/api/expenses/${exp.id}`).expect(200);
-    expect(get('SELECT quantity FROM inventory_items WHERE id = ?', [id('Huevos')]).quantity).toBeCloseTo(30);
+    expect((await get('SELECT quantity FROM inventory_items WHERE id = ?', [id('Huevos')])).quantity).toBeCloseTo(30);
   });
 });
 
@@ -293,7 +293,7 @@ describe('panel, recordatorios y buscador (datos de ejemplo)', () => {
     expect((await admin.get('/api/search?q=marta')).body.customers[0].name).toBe('Marta García');
     expect((await admin.get('/api/search?q=612345678')).body.customers[0].name).toBe('Marta García');
     expect((await admin.get('/api/search?q=lucia')).body.customers[0].name).toBe('Lucía Gómez'); // sin tilde
-    const n = all('SELECT number FROM orders ORDER BY number DESC LIMIT 1')[0].number;
+    const n = (await all('SELECT number FROM orders ORDER BY number DESC LIMIT 1'))[0].number;
     expect((await admin.get(`/api/search?q=%23${n}`)).body.orders.some((o: any) => o.number === n)).toBe(true);
     const byDate = (await admin.get('/api/search?q=8/10')).body.orders;
     expect(byDate.length).toBe(2);
@@ -305,12 +305,23 @@ describe('copias de seguridad', () => {
   it('crea, lista y restaura una copia', async () => {
     const { admin } = await freshApp();
     await admin.post('/api/customers').send({ name: 'Antes' }).expect(200);
-    const { name } = (await admin.post('/api/backups').expect(200)).body;
+    const { id } = (await admin.post('/api/backups').expect(200)).body;
     await admin.post('/api/customers').send({ name: 'Después' }).expect(200);
     expect((await admin.get('/api/customers')).body).toHaveLength(2);
-    expect((await admin.get('/api/backups')).body.map((b: any) => b.name)).toContain(name);
-    await admin.post(`/api/backups/restore/${name}`).expect(200);
-    const names = (await admin.get('/api/customers')).body.map((c: any) => c.name);
+    expect((await admin.get('/api/backups')).body.map((b: any) => b.id)).toContain(id);
+    // Se restaura sin cerrar la sesión de quien lo hace
+    await admin.post(`/api/backups/restore/${id}`).expect(200);
+    const names = (await admin.get('/api/customers').expect(200)).body.map((c: any) => c.name);
     expect(names).toEqual(['Antes']);
+    // Y también desde un archivo descargado
+    const file = await admin.get('/api/backups/download/current').buffer(true).parse((res, cb) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => cb(null, Buffer.concat(chunks)));
+    });
+    expect(file.status).toBe(200);
+    await admin.post('/api/customers').send({ name: 'Otro más' }).expect(200);
+    await admin.post('/api/backups/restore').set('Content-Type', 'application/gzip').send(file.body).expect(200);
+    expect((await admin.get('/api/customers')).body.map((c: any) => c.name)).toEqual(['Antes']);
   });
 });

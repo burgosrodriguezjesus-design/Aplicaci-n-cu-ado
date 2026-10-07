@@ -6,6 +6,8 @@ import { saveProduct, saveRecipe } from '../services/catalogCrud.js';
 import { createCustomer } from '../services/customers.js';
 import { addPayment, createOrder, setStatus, toggleTask } from '../services/orders.js';
 import { saveQuote } from '../services/quotes.js';
+import { Catalog } from '../services/catalog.js';
+import { lineSchema, linesTotal, normalizeLines, saveLines } from '../services/lines.js';
 import type { OrderStatus, Unit } from '../../shared/constants.js';
 
 type ItemDef = [
@@ -52,10 +54,10 @@ const ITEMS: ItemDef[] = [
   ['Topper personalizado', 'material', 'ud', 6, 2, 1.5, 1, [], 'Imprenta Rápida'],
 ];
 
-export function seedBasics() {
+export async function seedBasics() {
   // Artículos más habituales, sin stock: el negocio solo tiene que poner cantidades y precios.
   for (const [name, kind, unit, , , cost, pack, allergens] of ITEMS) {
-    createItem({ name, kind, unit, quantity: 0, min_stock: 0, cost_per_unit: cost, pack_size: pack, allergens }, null);
+    await createItem({ name, kind, unit, quantity: 0, min_stock: 0, cost_per_unit: cost, pack_size: pack, allergens }, null);
   }
 }
 
@@ -67,10 +69,10 @@ function rng(seed: number) {
   };
 }
 
-export function seedDemo(userId: number) {
+export async function seedDemo(userId: number) {
   const ids: Record<string, number> = {};
   for (const [name, kind, unit, quantity, min, cost, pack, allergens, supplier] of ITEMS) {
-    ids[name] = createItem(
+    ids[name] = await createItem(
       { name, kind, unit, quantity, min_stock: min, cost_per_unit: cost, pack_size: pack, allergens, supplier },
       userId,
     );
@@ -79,7 +81,7 @@ export function seedDemo(userId: number) {
 
   // ---------------- Recetas ----------------
   const R: Record<string, number> = {};
-  R.choco = saveRecipe({
+  R.choco = await saveRecipe({
     name: 'Bizcocho de chocolate',
     category: 'Bizcochos',
     servings: 10,
@@ -106,7 +108,7 @@ export function seedDemo(userId: number) {
       'Hornear 40 minutos o hasta que el palillo salga limpio. Enfriar sobre rejilla.',
     ],
   });
-  R.ganache = saveRecipe({
+  R.ganache = await saveRecipe({
     name: 'Ganache de chocolate',
     category: 'Rellenos y coberturas',
     servings: 10,
@@ -119,7 +121,7 @@ export function seedDemo(userId: number) {
       'Dejar templar antes de rellenar o cubrir.',
     ],
   });
-  R.redvelvet = saveRecipe({
+  R.redvelvet = await saveRecipe({
     name: 'Bizcocho Red Velvet',
     category: 'Bizcochos',
     servings: 10,
@@ -145,7 +147,7 @@ export function seedDemo(userId: number) {
       'Repartir en 2 moldes y hornear 35 minutos.',
     ],
   });
-  R.frosting = saveRecipe({
+  R.frosting = await saveRecipe({
     name: 'Frosting de queso crema',
     category: 'Rellenos y coberturas',
     servings: 10,
@@ -158,7 +160,7 @@ export function seedDemo(userId: number) {
     ],
     steps: ['Batir la mantequilla a punto pomada con el azúcar glas.', 'Añadir el queso crema frío y batir solo hasta integrar.'],
   });
-  R.cupcakes = saveRecipe({
+  R.cupcakes = await saveRecipe({
     name: 'Cupcakes de vainilla',
     category: 'Cupcakes',
     servings: 12,
@@ -181,7 +183,7 @@ export function seedDemo(userId: number) {
       'Llenar las cápsulas 2/3 y hornear 20 minutos.',
     ],
   });
-  R.buttercream = saveRecipe({
+  R.buttercream = await saveRecipe({
     name: 'Buttercream de vainilla',
     category: 'Rellenos y coberturas',
     servings: 12,
@@ -194,7 +196,7 @@ export function seedDemo(userId: number) {
     ],
     steps: ['Batir la mantequilla 5 minutos.', 'Añadir el azúcar glas poco a poco y la leche hasta que quede cremosa.'],
   });
-  R.galletas = saveRecipe({
+  R.galletas = await saveRecipe({
     name: 'Galletas de mantequilla',
     category: 'Galletas',
     servings: 30,
@@ -214,7 +216,7 @@ export function seedDemo(userId: number) {
       'Estirar a 5 mm, cortar con los cortadores y hornear 12 minutos a 180 °C.',
     ],
   });
-  R.glasa = saveRecipe({
+  R.glasa = await saveRecipe({
     name: 'Glasa real',
     category: 'Rellenos y coberturas',
     servings: 30,
@@ -222,7 +224,7 @@ export function seedDemo(userId: number) {
     ingredients: [ing('Azúcar glas', 400, 'g'), ing('Huevos', 1, 'ud')],
     steps: ['Batir la clara con el azúcar glas hasta conseguir picos firmes.', 'Colorear y ajustar la consistencia con agua.'],
   });
-  R.brownie = saveRecipe({
+  R.brownie = await saveRecipe({
     name: 'Brownie de chocolate y nueces',
     category: 'Brownies',
     servings: 12,
@@ -245,7 +247,7 @@ export function seedDemo(userId: number) {
       'Hornear 25 minutos a 180 °C: el centro debe quedar jugoso.',
     ],
   });
-  R.cheesecake = saveRecipe({
+  R.cheesecake = await saveRecipe({
     name: 'Tarta de queso al horno',
     category: 'Cheesecakes',
     servings: 10,
@@ -284,7 +286,7 @@ export function seedDemo(userId: number) {
     { name: 'Topper personalizado', price: 6 },
     { name: 'Mensaje en chocolate', price: 3 },
   ];
-  P.choco = saveProduct({
+  P.choco = await saveProduct({
     name: 'Tarta de chocolate',
     category: 'tartas',
     description: 'Bizcocho húmedo de chocolate relleno y cubierto de ganache. La favorita de la casa.',
@@ -310,7 +312,7 @@ export function seedDemo(userId: number) {
       mat('Base de cartón dorada', 1),
     ],
   });
-  P.redvelvet = saveProduct({
+  P.redvelvet = await saveProduct({
     name: 'Tarta Red Velvet',
     category: 'tartas',
     description: 'Bizcocho rojo aterciopelado con frosting de queso crema.',
@@ -334,7 +336,7 @@ export function seedDemo(userId: number) {
       mat('Base de cartón dorada', 1),
     ],
   });
-  P.custom = saveProduct({
+  P.custom = await saveProduct({
     name: 'Tarta personalizada',
     category: 'tartas_personalizadas',
     description: 'Diseño a medida en fondant o buttercream: cumpleaños, bautizos, comuniones… Precio por ración.',
@@ -361,7 +363,7 @@ export function seedDemo(userId: number) {
       mat('Base de cartón dorada', 1),
     ],
   });
-  P.cupcakes = saveProduct({
+  P.cupcakes = await saveProduct({
     name: 'Cupcakes',
     category: 'cupcakes',
     description: 'Cupcakes esponjosos con buttercream. Sueltos o en caja.',
@@ -387,7 +389,7 @@ export function seedDemo(userId: number) {
       mat('Caja 6 cupcakes', 2, 2),
     ],
   });
-  P.galletas = saveProduct({
+  P.galletas = await saveProduct({
     name: 'Galletas personalizadas',
     category: 'galletas',
     description: 'Galletas de mantequilla decoradas con glasa, en bolsita individual.',
@@ -399,7 +401,7 @@ export function seedDemo(userId: number) {
     extras: [{ name: 'Caja regalo', price: 3 }],
     components: [recipe(R.galletas), recipe(R.glasa), mat('Bolsa galleta individual', 1)],
   });
-  P.brownie = saveProduct({
+  P.brownie = await saveProduct({
     name: 'Brownie',
     category: 'brownies',
     description: 'Brownie jugoso de chocolate negro con nueces.',
@@ -413,7 +415,7 @@ export function seedDemo(userId: number) {
     ],
     components: [recipe(R.brownie)],
   });
-  P.cheesecake = saveProduct({
+  P.cheesecake = await saveProduct({
     name: 'Tarta de queso',
     category: 'cheesecakes',
     description: 'Tarta de queso al horno, cremosa por dentro, con base de galleta.',
@@ -428,7 +430,7 @@ export function seedDemo(userId: number) {
     ],
     components: [recipe(R.cheesecake), mat('Caja tarta pequeña', 1, 0), mat('Caja tarta grande', 1, 1), mat('Base de cartón dorada', 1)],
   });
-  P.pack = saveProduct({
+  P.pack = await saveProduct({
     name: 'Pack desayuno sorpresa',
     category: 'packs',
     description: '4 cupcakes, 4 brownies y 6 galletas decoradas en caja regalo. Ideal para regalar.',
@@ -461,7 +463,7 @@ export function seedDemo(userId: number) {
     ['olivo', 'Restaurante El Olivo', { phone: '952 123 456', email: 'pedidos@elolivo.es', address: 'Plaza del Carmen 3', notes: 'Cliente de empresa. Factura a fin de mes.' }],
   ];
   for (const [key, name, extra] of customers) {
-    C[key] = createCustomer({
+    C[key] = await createCustomer({
       name,
       phone: null,
       email: null,
@@ -473,12 +475,14 @@ export function seedDemo(userId: number) {
       ...extra,
     } as any);
   }
-  const cust = (k: string) => get('SELECT id, name, phone, address FROM customers WHERE id = ?', [C[k]]);
-  const size = (productId: number, index: number) =>
-    all('SELECT id FROM product_sizes WHERE product_id = ? ORDER BY sort', [productId])[index].id;
+  const customerRows = new Map((await all('SELECT id, name, phone, address FROM customers')).map((c) => [c.id, c]));
+  const cust = (k: string) => customerRows.get(C[k]);
+  const sizeRows = await all<{ id: number; product_id: number }>('SELECT id, product_id FROM product_sizes ORDER BY product_id, sort, id');
+  const size = (productId: number, index: number) => sizeRows.filter((r) => r.product_id === productId)[index].id;
 
   // ---------------- Pedidos ----------------
   interface DemoOrder {
+    history?: boolean;
     c: string;
     day: number;
     time?: string;
@@ -529,6 +533,7 @@ export function seedDemo(userId: number) {
   const pastOrder = (day: number): DemoOrder => {
     const [pid, sid] = pastProducts[Math.floor(rand() * pastProducts.length)];
     return {
+      history: true,
       c: keys[Math.floor(rand() * keys.length)],
       day,
       time: ['11:00', '13:00', '17:30', '19:00'][Math.floor(rand() * 4)],
@@ -559,10 +564,39 @@ export function seedDemo(userId: number) {
   }
   demo.sort((a, b) => a.day - b.day);
 
+  // Los pedidos del histórico (ya entregados y cobrados) se insertan directamente;
+  // los de estos días pasan por todo el flujo real (tareas, stock, estados…).
+  const cat = await Catalog.load();
+  let number = 1;
   for (const d of demo) {
     const c = cust(d.c);
     const date = addDays(t, d.day);
-    const id = createOrder(
+    const when = `${date}T${d.time ?? '12:00'}`;
+    if (d.history) {
+      const lines = normalizeLines(d.items.map((i) => lineSchema.parse(i)), cat);
+      const total = linesTotal(lines);
+      const id = await insert('orders', {
+        number: number++,
+        customer_id: c.id,
+        customer_name: c.name,
+        customer_phone: c.phone,
+        order_date: addDays(date, -7),
+        delivery_date: date,
+        delivery_time: d.time ?? null,
+        delivery_type: 'pickup',
+        total,
+        payment_method: 'efectivo',
+        status: 'entregado',
+        stock_consumed_at: `${addDays(date, -1)}T09:00:00.000Z`,
+        confirmed_at: `${addDays(date, -6)}T10:00`,
+        delivered_at: when,
+        created_by: userId,
+      });
+      await saveLines('order_items', id, lines);
+      await insert('payments', { order_id: id, kind: 'payment', amount: total, method: rand() < 0.5 ? 'efectivo' : 'bizum', paid_at: when, user_id: userId });
+      continue;
+    }
+    const id = await createOrder(
       {
         customer_id: c.id,
         customer_name: c.name,
@@ -581,29 +615,26 @@ export function seedDemo(userId: number) {
       },
       userId,
     );
+    number++;
     const stamp = `${addDays(date, -5) < t ? addDays(date, -5) : t}T10:00`;
-    run('UPDATE payments SET paid_at = ? WHERE order_id = ?', [stamp, id]);
+    await run('UPDATE payments SET paid_at = ? WHERE order_id = ?', [stamp, id]);
     if (d.tasksDone) {
-      setStatus(id, 'pendiente', userId);
-      for (const tk of all("SELECT id, stage FROM production_tasks WHERE order_id = ?", [id])) {
-        if (d.tasksDone.includes(tk.stage)) toggleTask(tk.id, true, userId);
+      await setStatus(id, 'pendiente', userId);
+      for (const tk of await all('SELECT id, stage FROM production_tasks WHERE order_id = ?', [id])) {
+        if (d.tasksDone.includes(tk.stage)) await toggleTask(tk.id, true, userId);
       }
     } else if (d.status !== 'nuevo') {
-      setStatus(id, d.status, userId);
+      await setStatus(id, d.status, userId);
     }
-    const order = get('SELECT total FROM orders WHERE id = ?', [id]);
+    const order = await get('SELECT total FROM orders WHERE id = ?', [id]);
     if (d.paidAll) {
-      const paid = get("SELECT COALESCE(SUM(amount),0) AS p FROM payments WHERE order_id = ?", [id]).p;
-      if (order.total - paid > 0) addPayment(id, { kind: 'payment', amount: order.total - paid, method: 'efectivo' }, userId);
+      const paid = (await get('SELECT COALESCE(SUM(amount),0) AS p FROM payments WHERE order_id = ?', [id])).p;
+      if (order.total - paid > 0) await addPayment(id, { kind: 'payment', amount: order.total - paid, method: 'efectivo' }, userId);
     }
     if (d.status === 'entregado') {
-      run('UPDATE orders SET delivered_at = ?, confirmed_at = ? WHERE id = ?', [
-        `${date}T${d.time ?? '12:00'}`,
-        `${addDays(date, -6)}T10:00`,
-        id,
-      ]);
-      run("UPDATE payments SET paid_at = ? WHERE order_id = ? AND kind = 'payment'", [`${date}T${d.time ?? '12:00'}`, id]);
-      run('UPDATE inventory_movements SET created_at = ? WHERE order_id = ?', [`${addDays(date, -1)}T09:00:00.000Z`, id]);
+      await run('UPDATE orders SET delivered_at = ?, confirmed_at = ? WHERE id = ?', [when, `${addDays(date, -6)}T10:00`, id]);
+      await run("UPDATE payments SET paid_at = ? WHERE order_id = ? AND kind = 'payment'", [when, id]);
+      await run('UPDATE inventory_movements SET created_at = ? WHERE order_id = ?', [`${addDays(date, -1)}T09:00:00.000Z`, id]);
     }
   }
 
@@ -619,7 +650,7 @@ export function seedDemo(userId: number) {
   for (let i = 0; i < 70; i++) {
     const [description, amount] = sales[Math.floor(rand() * sales.length)];
     const day = addDays(t, -1 - Math.floor(rand() * 150));
-    insert('payments', {
+    await insert('payments', {
       kind: 'direct_sale',
       amount,
       method: rand() < 0.5 ? 'tarjeta' : 'efectivo',
@@ -632,24 +663,24 @@ export function seedDemo(userId: number) {
   // ---------------- Gastos ----------------
   for (let m = 5; m >= 0; m--) {
     const month = addMonths(t.slice(0, 7), -m);
-    const exp = (day: number, category: string, description: string, amount: number, supplier: string | null = null) => {
+    const exp = async (day: number, category: string, description: string, amount: number, supplier: string | null = null) => {
       const date = `${month}-${String(day).padStart(2, '0')}`;
       if (date > t) return;
-      insert('expenses', { date, category, description, amount, supplier, payment_method: 'transferencia', user_id: userId });
+      await insert('expenses', { date, category, description, amount, supplier, payment_method: 'transferencia', user_id: userId });
     };
-    exp(1, 'alquiler', 'Alquiler del obrador', 400, 'Inmobiliaria Sur');
-    exp(5, 'suministros', 'Luz', 95 + Math.round(rand() * 40), 'Iberdrola');
-    exp(6, 'suministros', 'Agua y gas', 38 + Math.round(rand() * 15));
-    exp(3, 'ingredientes', 'Compra semanal Makro', 120 + Math.round(rand() * 60), 'Makro');
-    exp(10, 'ingredientes', 'Compra semanal Makro', 110 + Math.round(rand() * 60), 'Makro');
-    exp(17, 'ingredientes', 'Compra semanal Makro', 100 + Math.round(rand() * 70), 'Makro');
-    exp(12, 'materiales', 'Cajas, bases y cápsulas', 60 + Math.round(rand() * 40), 'Envases Pastry');
-    exp(20, 'impuestos', 'Cuota autónomos', 230, 'Seguridad Social');
-    if (m % 2 === 0) exp(15, 'marketing', 'Publicidad en Instagram', 30);
+    await exp(1, 'alquiler', 'Alquiler del obrador', 400, 'Inmobiliaria Sur');
+    await exp(5, 'suministros', 'Luz', 95 + Math.round(rand() * 40), 'Iberdrola');
+    await exp(6, 'suministros', 'Agua y gas', 38 + Math.round(rand() * 15));
+    await exp(3, 'ingredientes', 'Compra semanal Makro', 120 + Math.round(rand() * 60), 'Makro');
+    await exp(10, 'ingredientes', 'Compra semanal Makro', 110 + Math.round(rand() * 60), 'Makro');
+    await exp(17, 'ingredientes', 'Compra semanal Makro', 100 + Math.round(rand() * 70), 'Makro');
+    await exp(12, 'materiales', 'Cajas, bases y cápsulas', 60 + Math.round(rand() * 40), 'Envases Pastry');
+    await exp(20, 'impuestos', 'Cuota autónomos', 230, 'Seguridad Social');
+    if (m % 2 === 0) await exp(15, 'marketing', 'Publicidad en Instagram', 30);
   }
 
   // ---------------- Presupuestos ----------------
-  saveQuote(
+  await saveQuote(
     {
       customer_id: C.olivo,
       customer_name: 'Restaurante El Olivo',
@@ -670,7 +701,7 @@ export function seedDemo(userId: number) {
     },
     userId,
   );
-  saveQuote(
+  await saveQuote(
     {
       customer_name: 'Elena Torres',
       customer_phone: '689 012 345',
@@ -686,17 +717,19 @@ export function seedDemo(userId: number) {
   );
 
   // ---------------- Recordatorios y compra ----------------
-  insert('reminders', { text: 'Llamar a Envases Pastry para pedir cajas grandes', due_date: t, created_by: userId });
-  insert('reminders', { text: 'Revisar la temperatura de la cámara frigorífica', due_date: addDays(t, 2), created_by: userId });
-  insert('shopping_extras', { name: 'Papel de horno', quantity: '2 rollos' });
+  await insert('reminders', { text: 'Llamar a Envases Pastry para pedir cajas grandes', due_date: t, created_by: userId });
+  await insert('reminders', { text: 'Revisar la temperatura de la cámara frigorífica', due_date: addDays(t, 2), created_by: userId });
+  await insert('shopping_extras', { name: 'Papel de horno', quantity: '2 rollos' });
 
   // El histórico no debe vaciar el almacén actual: solo cuentan los pedidos de estos días.
-  const old = all<{ id: number }>('SELECT id FROM orders WHERE delivery_date < ?', [addDays(t, -1)]);
-  for (const o of old) run("DELETE FROM inventory_movements WHERE order_id = ? AND type = 'consumption'", [o.id]);
-  run('UPDATE inventory_items SET quantity = (SELECT COALESCE(SUM(m.quantity), 0) FROM inventory_movements m WHERE m.item_id = inventory_items.id)');
+  await run(
+    "DELETE FROM inventory_movements WHERE type = 'consumption' AND order_id IN (SELECT id FROM orders WHERE delivery_date < ?)",
+    [addDays(t, -1)],
+  );
+  await run('UPDATE inventory_items SET quantity = (SELECT COALESCE(SUM(m.quantity), 0) FROM inventory_movements m WHERE m.item_id = inventory_items.id)');
 
   // Situaciones de stock bajo para que se vean los avisos.
-  adjustStock(ids['Huevos'], { set: 12, note: 'Recuento' }, userId);
-  adjustStock(ids['Caja tarta grande'], { set: 2, note: 'Recuento' }, userId);
-  adjustStock(ids['Nata para montar 35%'], { set: 0.5, note: 'Recuento' }, userId);
+  await adjustStock(ids['Huevos'], { set: 12, note: 'Recuento' }, userId);
+  await adjustStock(ids['Caja tarta grande'], { set: 2, note: 'Recuento' }, userId);
+  await adjustStock(ids['Nata para montar 35%'], { set: 0.5, note: 'Recuento' }, userId);
 }

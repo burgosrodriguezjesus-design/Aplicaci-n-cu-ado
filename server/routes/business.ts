@@ -53,7 +53,7 @@ export const businessRouter = Router();
 
 businessRouter.get(
   '/customers',
-  h((req) => {
+  h(async (req) => {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const norm = q.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     const digits = q.replace(/\D/g, '');
@@ -61,52 +61,52 @@ businessRouter.get(
       ? `WHERE norm(c.name) LIKE ? OR norm(c.email) LIKE ? ${digits.length >= 3 ? 'OR digits(c.phone) LIKE ?' : ''}`
       : '';
     const params = q ? [`%${norm}%`, `%${norm}%`, ...(digits.length >= 3 ? [`%${digits}%`] : [])] : [];
-    return all(
+    return (await all(
       `SELECT c.*,
               (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id AND o.status <> 'cancelado') AS orders_count,
               (SELECT COALESCE(SUM(o.total), 0) FROM orders o WHERE o.customer_id = c.id AND o.status = 'entregado') AS total_spent,
               (SELECT MAX(o.delivery_date) FROM orders o WHERE o.customer_id = c.id AND o.status <> 'cancelado') AS last_order_date
          FROM customers c ${where}
-        ORDER BY c.name COLLATE NOCASE LIMIT ${q ? 30 : 1000}`,
+        ORDER BY lower(c.name) LIMIT ${q ? 30 : 1000}`,
       params,
-    ).map(mapCustomer);
+    )).map(mapCustomer);
   }),
 );
 
 businessRouter.get(
   '/customers/:id',
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
-    const c = mapCustomer(get('SELECT * FROM customers WHERE id = ?', [id]));
+    const c = mapCustomer(await get('SELECT * FROM customers WHERE id = ?', [id]));
     if (!c) throw notFound('Cliente');
-    const orders = listOrders('o.customer_id = ?', [id], 'o.delivery_date DESC, o.id DESC LIMIT 100');
-    const favorites = all(
+    const orders = await listOrders('o.customer_id = ?', [id], 'o.delivery_date DESC, o.id DESC LIMIT 100');
+    const favorites = await all(
       `SELECT oi.product_name AS name, oi.flavor, COUNT(*) AS times, SUM(oi.quantity) AS quantity
          FROM order_items oi JOIN orders o ON o.id = oi.order_id
         WHERE o.customer_id = ? AND o.status <> 'cancelado'
         GROUP BY oi.product_name, oi.flavor ORDER BY times DESC LIMIT 5`,
       [id],
     );
-    const quotes = all('SELECT id, number, date, total, status FROM quotes WHERE customer_id = ? ORDER BY date DESC LIMIT 20', [id]);
+    const quotes = await all('SELECT id, number, date, total, status FROM quotes WHERE customer_id = ? ORDER BY date DESC LIMIT 20', [id]);
     const pending = orders.reduce((s, o) => s + (o.status !== 'cancelado' ? o.pending : 0), 0);
-    return { ...c, ...customerStats(id), pending, orders, favorites, quotes };
+    return { ...c, ...(await customerStats(id)), pending, orders, favorites, quotes };
   }),
 );
 
 businessRouter.post(
   '/customers',
-  h((req) => {
+  h(async (req) => {
     const input = customerSchema.parse(req.body);
-    return { id: createCustomer(input) };
+    return { id: await createCustomer(input) };
   }),
 );
 
 businessRouter.put(
   '/customers/:id',
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
-    if (!get('SELECT id FROM customers WHERE id = ?', [id])) throw notFound('Cliente');
-    updateCustomer(id, customerSchema.parse(req.body));
+    if (!(await get('SELECT id FROM customers WHERE id = ?', [id]))) throw notFound('Cliente');
+    await updateCustomer(id, customerSchema.parse(req.body));
     return { id };
   }),
 );
@@ -114,8 +114,8 @@ businessRouter.put(
 businessRouter.delete(
   '/customers/:id',
   requirePerm('perm_delete'),
-  h((req) => {
-    run('DELETE FROM customers WHERE id = ?', [toId(req.params.id)]);
+  h(async (req) => {
+    await run('DELETE FROM customers WHERE id = ?', [toId(req.params.id)]);
   }),
 );
 
@@ -132,7 +132,7 @@ businessRouter.get(
 
 businessRouter.get(
   '/products/:id',
-  h((req) => productView(new Catalog(), toId(req.params.id), can(req, 'perm_costs'))),
+  h(async (req) => productView(await Catalog.load(), toId(req.params.id), can(req, 'perm_costs'))),
 );
 
 businessRouter.get(
@@ -147,8 +147,8 @@ businessRouter.get(
 
 businessRouter.get(
   '/products/:id/price',
-  h((req) => {
-    const p = new Catalog().product(toId(req.params.id));
+  h(async (req) => {
+    const p = (await Catalog.load()).product(toId(req.params.id));
     if (!p) throw notFound('Producto');
     const sizeId = req.query.size_id ? toId(req.query.size_id) : null;
     const servings = req.query.servings ? Number(req.query.servings) : null;
@@ -159,20 +159,20 @@ businessRouter.get(
 businessRouter.post(
   '/products',
   requirePerm('perm_catalog'),
-  h((req) => ({ id: saveProduct(req.body) })),
+  h(async (req) => ({ id: await saveProduct(req.body) })),
 );
 
 businessRouter.put(
   '/products/:id',
   requirePerm('perm_catalog'),
-  h((req) => ({ id: saveProduct(req.body, toId(req.params.id)) })),
+  h(async (req) => ({ id: await saveProduct(req.body, toId(req.params.id)) })),
 );
 
 /** Cambios rápidos desde el escandallo: precio de un tamaño / producto, mano de obra, otros costes. */
 businessRouter.patch(
   '/products/:id/pricing',
   requirePerm('perm_catalog'),
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
     const input = z
       .object({
@@ -182,15 +182,15 @@ businessRouter.patch(
         other_costs: z.number().min(0).optional(),
       })
       .parse(req.body);
-    if (!get('SELECT id FROM products WHERE id = ?', [id])) throw notFound('Producto');
+    if (!(await get('SELECT id FROM products WHERE id = ?', [id]))) throw notFound('Producto');
     if (input.price !== undefined) {
-      if (input.size_id) run('UPDATE product_sizes SET price = ? WHERE id = ? AND product_id = ?', [input.price, input.size_id, id]);
-      else run('UPDATE products SET base_price = ? WHERE id = ?', [input.price, id]);
+      if (input.size_id) await run('UPDATE product_sizes SET price = ? WHERE id = ? AND product_id = ?', [input.price, input.size_id, id]);
+      else await run('UPDATE products SET base_price = ? WHERE id = ?', [input.price, id]);
     }
     const patch: Record<string, unknown> = {};
     if (input.labor_minutes !== undefined) patch.labor_minutes = input.labor_minutes;
     if (input.other_costs !== undefined) patch.other_costs = input.other_costs;
-    update('products', id, patch);
+    await update('products', id, patch);
     return productCosting(id, input.size_id ?? null, null);
   }),
 );
@@ -199,9 +199,9 @@ businessRouter.patch(
 businessRouter.patch(
   '/product-components/:id',
   requirePerm('perm_catalog'),
-  h((req) => {
+  h(async (req) => {
     const { quantity } = z.object({ quantity: z.number().positive() }).parse(req.body);
-    run('UPDATE product_components SET quantity = ? WHERE id = ?', [quantity, toId(req.params.id)]);
+    await run('UPDATE product_components SET quantity = ? WHERE id = ?', [quantity, toId(req.params.id)]);
   }),
 );
 
@@ -225,11 +225,11 @@ businessRouter.get(
   }),
 );
 
-businessRouter.post('/recipes', requirePerm('perm_catalog'), h((req) => ({ id: saveRecipe(req.body) })));
+businessRouter.post('/recipes', requirePerm('perm_catalog'), h(async (req) => ({ id: await saveRecipe(req.body) })));
 businessRouter.put(
   '/recipes/:id',
   requirePerm('perm_catalog'),
-  h((req) => ({ id: saveRecipe(req.body, toId(req.params.id)) })),
+  h(async (req) => ({ id: await saveRecipe(req.body, toId(req.params.id)) })),
 );
 businessRouter.delete(
   '/recipes/:id',
@@ -247,41 +247,41 @@ function hideCost<T extends { cost_per_unit?: number }>(req: Parameters<typeof c
 
 businessRouter.get(
   '/inventory',
-  h((req) => {
+  h(async (req) => {
     const kind = req.query.kind === 'ingredient' || req.query.kind === 'material' ? req.query.kind : undefined;
-    return hideCost(req, listItems(kind));
+    return hideCost(req, await listItems(kind));
   }),
 );
 
 businessRouter.get(
   '/inventory/:id',
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
-    const r = get('SELECT * FROM inventory_items WHERE id = ?', [id]);
+    const r = await get('SELECT * FROM inventory_items WHERE id = ?', [id]);
     if (!r) throw notFound('Artículo');
     const [item] = hideCost(req, [mapItem(r)]);
-    return { ...item, movements: itemMovements(id), usage: itemUsage(id) };
+    return { ...item, movements: await itemMovements(id), usage: await itemUsage(id) };
   }),
 );
 
 businessRouter.post(
   '/inventory',
   requirePerm('perm_inventory'),
-  h((req) => ({ id: createItem(req.body, req.user!.id) })),
+  h(async (req) => ({ id: await createItem(req.body, req.user!.id) })),
 );
 
 businessRouter.put(
   '/inventory/:id',
   requirePerm('perm_inventory'),
-  h((req) => {
-    updateItem(toId(req.params.id), req.body, req.user!.id);
+  h(async (req) => {
+    await updateItem(toId(req.params.id), req.body, req.user!.id);
   }),
 );
 
 businessRouter.post(
   '/inventory/:id/adjust',
   requirePerm('perm_inventory'),
-  h((req) => ({ quantity: adjustStock(toId(req.params.id), req.body, req.user!.id) })),
+  h(async (req) => ({ quantity: await adjustStock(toId(req.params.id), req.body, req.user!.id) })),
 );
 
 businessRouter.delete(
@@ -304,16 +304,16 @@ businessRouter.get(
 
 businessRouter.post(
   '/shopping/checks',
-  h((req) => {
+  h(async (req) => {
     const { item_id, checked } = z.object({ item_id: z.number().int().positive(), checked: z.boolean() }).parse(req.body);
-    if (checked) run('INSERT OR IGNORE INTO shopping_checks (item_id) VALUES (?)', [item_id]);
-    else run('DELETE FROM shopping_checks WHERE item_id = ?', [item_id]);
+    if (checked) await run('INSERT INTO shopping_checks (item_id) VALUES (?) ON CONFLICT DO NOTHING', [item_id]);
+    else await run('DELETE FROM shopping_checks WHERE item_id = ?', [item_id]);
   }),
 );
 
 businessRouter.post(
   '/shopping/extras',
-  h((req) => {
+  h(async (req) => {
     const input = z
       .object({
         name: z.string().trim().min(1, 'Escribe qué hay que comprar').max(200),
@@ -321,22 +321,22 @@ businessRouter.post(
         item_id: z.number().int().positive().nullable().optional(),
       })
       .parse(req.body);
-    return { id: insert('shopping_extras', { name: input.name, quantity: input.quantity || null, item_id: input.item_id ?? null }) };
+    return { id: await insert('shopping_extras', { name: input.name, quantity: input.quantity || null, item_id: input.item_id ?? null }) };
   }),
 );
 
 businessRouter.patch(
   '/shopping/extras/:id',
-  h((req) => {
+  h(async (req) => {
     const { done } = z.object({ done: z.boolean() }).parse(req.body);
-    run('UPDATE shopping_extras SET done = ?, done_at = ? WHERE id = ?', [done ? 1 : 0, done ? today() : null, toId(req.params.id)]);
+    await run('UPDATE shopping_extras SET done = ?, done_at = ? WHERE id = ?', [done ? 1 : 0, done ? today() : null, toId(req.params.id)]);
   }),
 );
 
 businessRouter.delete(
   '/shopping/extras/:id',
-  h((req) => {
-    run('DELETE FROM shopping_extras WHERE id = ?', [toId(req.params.id)]);
+  h(async (req) => {
+    await run('DELETE FROM shopping_extras WHERE id = ?', [toId(req.params.id)]);
   }),
 );
 
@@ -363,14 +363,14 @@ businessRouter.get('/finance/movements', requirePerm('perm_finances'), h((req) =
 
 businessRouter.post(
   '/finance/sales',
-  h((req) => ({ id: registerDirectSale(req.body, req.user!.id) })),
+  h(async (req) => ({ id: await registerDirectSale(req.body, req.user!.id) })),
 );
 
 businessRouter.delete(
   '/finance/sales/:id',
   requirePerm('perm_finances'),
-  h((req) => {
-    run("DELETE FROM payments WHERE id = ? AND kind = 'direct_sale'", [toId(req.params.id)]);
+  h(async (req) => {
+    await run("DELETE FROM payments WHERE id = ? AND kind = 'direct_sale'", [toId(req.params.id)]);
   }),
 );
 
@@ -390,32 +390,32 @@ businessRouter.get(
 businessRouter.post(
   '/expenses',
   requirePerm('perm_finances'),
-  h((req) => {
+  h(async (req) => {
     const input = expenseSchema.parse(req.body);
-    return { id: insert('expenses', { ...input, user_id: req.user!.id }) };
+    return { id: await insert('expenses', { ...input, user_id: req.user!.id }) };
   }),
 );
 
 businessRouter.put(
   '/expenses/:id',
   requirePerm('perm_finances'),
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
     const input = expenseSchema.parse(req.body);
-    if (!get('SELECT id FROM expenses WHERE id = ?', [id])) throw notFound('Gasto');
-    update('expenses', id, input);
+    if (!(await get('SELECT id FROM expenses WHERE id = ?', [id]))) throw notFound('Gasto');
+    await update('expenses', id, input);
   }),
 );
 
 businessRouter.delete(
   '/expenses/:id',
-  h((req) => {
+  h(async (req) => {
     // Deshacer una compra (lista de la compra) también lo puede hacer quien gestiona inventario.
     const id = toId(req.params.id);
-    const isPurchase = get('SELECT COUNT(*) AS n FROM inventory_movements WHERE expense_id = ?', [id])!.n > 0;
+    const isPurchase = (await get('SELECT COUNT(*) AS n FROM inventory_movements WHERE expense_id = ?', [id]))!.n > 0;
     if (!can(req, 'perm_finances') && !(isPurchase && can(req, 'perm_inventory'))) {
       throw badRequest('No tienes permiso para borrar gastos');
     }
-    deleteExpense(id);
+    await deleteExpense(id);
   }),
 );

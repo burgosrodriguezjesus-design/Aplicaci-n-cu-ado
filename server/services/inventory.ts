@@ -29,9 +29,9 @@ export const itemSchema = z.object({
   notes: optText,
 });
 
-export function listItems(kind?: string) {
-  const rows = all(
-    `SELECT * FROM inventory_items WHERE active = 1 ${kind ? 'AND kind = ?' : ''} ORDER BY name COLLATE NOCASE`,
+export async function listItems(kind?: string) {
+  const rows = await all(
+    `SELECT * FROM inventory_items WHERE active = 1 ${kind ? 'AND kind = ?' : ''} ORDER BY lower(name)`,
     kind ? [kind] : [],
   );
   return rows.map(mapItem).map((i) => ({ ...i, low: isLow(i) }));
@@ -41,21 +41,21 @@ export function isLow(i: Pick<InventoryItem, 'quantity' | 'min_stock'>) {
   return i.quantity < 0 || (i.min_stock > 0 && i.quantity <= i.min_stock);
 }
 
-export function lowStockItems() {
-  return listItems().filter((i) => i.low);
+export async function lowStockItems() {
+  return (await listItems()).filter((i) => i.low);
 }
 
-export function createItem(raw: unknown, userId: number | null) {
+export async function createItem(raw: unknown, userId: number | null) {
   const input = itemSchema.parse(raw);
-  return tx(() => {
-    const id = insert('inventory_items', {
+  return tx(async () => {
+    const id = await insert('inventory_items', {
       ...input,
       quantity: 0,
       pack_size: input.pack_size ?? null,
       allergens: JSON.stringify(input.allergens),
     });
     if (input.quantity) {
-      insert('inventory_movements', {
+      await insert('inventory_movements', {
         item_id: id,
         type: 'adjustment',
         quantity: input.quantity,
@@ -63,38 +63,38 @@ export function createItem(raw: unknown, userId: number | null) {
         note: 'Stock inicial',
         user_id: userId,
       });
-      run('UPDATE inventory_items SET quantity = ? WHERE id = ?', [input.quantity, id]);
+      await run('UPDATE inventory_items SET quantity = ? WHERE id = ?', [input.quantity, id]);
     }
     return id;
   });
 }
 
-export function updateItem(id: number, raw: unknown, userId: number | null) {
+export async function updateItem(id: number, raw: unknown, userId: number | null) {
   const input = itemSchema.parse(raw);
-  return tx(() => {
-    const item = get('SELECT * FROM inventory_items WHERE id = ?', [id]);
+  return tx(async () => {
+    const item = await get('SELECT * FROM inventory_items WHERE id = ?', [id]);
     if (!item) throw notFound('Artículo');
     const { quantity, ...rest } = input;
-    update('inventory_items', id, {
+    await update('inventory_items', id, {
       ...rest,
       pack_size: input.pack_size ?? null,
       allergens: JSON.stringify(input.allergens),
       updated_at: nowIso(),
     });
-    if (Math.abs(quantity - item.quantity) > 1e-9) adjustStock(id, { set: quantity, note: 'Corrección manual' }, userId);
+    if (Math.abs(quantity - item.quantity) > 1e-9) await adjustStock(id, { set: quantity, note: 'Corrección manual' }, userId);
   });
 }
 
-export function deleteItem(id: number) {
+export async function deleteItem(id: number) {
   const used =
-    get('SELECT COUNT(*) AS n FROM recipe_ingredients WHERE item_id = ?', [id])!.n +
-    get('SELECT COUNT(*) AS n FROM product_components WHERE item_id = ?', [id])!.n;
+    (await get('SELECT COUNT(*) AS n FROM recipe_ingredients WHERE item_id = ?', [id]))!.n +
+    (await get('SELECT COUNT(*) AS n FROM product_components WHERE item_id = ?', [id]))!.n;
   if (used) {
     // Se usa en recetas: se archiva para no romper los escandallos.
-    run('UPDATE inventory_items SET active = 0 WHERE id = ?', [id]);
+    await run('UPDATE inventory_items SET active = 0 WHERE id = ?', [id]);
     return { archived: true };
   }
-  run('DELETE FROM inventory_items WHERE id = ?', [id]);
+  await run('DELETE FROM inventory_items WHERE id = ?', [id]);
   return { archived: false };
 }
 
@@ -106,16 +106,16 @@ export const adjustSchema = z.object({
 });
 
 /** Ajuste de stock: fijar una cantidad, sumar o restar (merma). */
-export function adjustStock(id: number, raw: unknown, userId: number | null) {
+export async function adjustStock(id: number, raw: unknown, userId: number | null) {
   const input = adjustSchema.parse(raw);
-  return tx(() => {
-    const item = get('SELECT * FROM inventory_items WHERE id = ?', [id]);
+  return tx(async () => {
+    const item = await get('SELECT * FROM inventory_items WHERE id = ?', [id]);
     if (!item) throw notFound('Artículo');
     let delta = input.delta ?? 0;
     if (input.set !== undefined) delta = input.set - item.quantity;
     if (input.type === 'waste') delta = -Math.abs(delta);
     if (!delta) return item.quantity;
-    insert('inventory_movements', {
+    await insert('inventory_movements', {
       item_id: id,
       type: input.type,
       quantity: delta,
@@ -123,7 +123,7 @@ export function adjustStock(id: number, raw: unknown, userId: number | null) {
       note: input.note ?? null,
       user_id: userId,
     });
-    run('UPDATE inventory_items SET quantity = quantity + ?, updated_at = ? WHERE id = ?', [delta, nowIso(), id]);
+    await run('UPDATE inventory_items SET quantity = quantity + ?, updated_at = ? WHERE id = ?', [delta, nowIso(), id]);
     return item.quantity + delta;
   });
 }
@@ -140,13 +140,13 @@ export function itemMovements(id: number, limit = 50) {
 }
 
 /** Dónde se usa un artículo (recetas y productos). */
-export function itemUsage(id: number) {
+export async function itemUsage(id: number) {
   return {
-    recipes: all(
+    recipes: await all(
       `SELECT DISTINCT r.id, r.name FROM recipe_ingredients ri JOIN recipes r ON r.id = ri.recipe_id WHERE ri.item_id = ? ORDER BY r.name`,
       [id],
     ),
-    products: all(
+    products: await all(
       `SELECT DISTINCT p.id, p.name FROM product_components pc JOIN products p ON p.id = pc.product_id WHERE pc.item_id = ? ORDER BY p.name`,
       [id],
     ),
@@ -176,21 +176,21 @@ export function upcomingOrdersForShopping(days: number, includeNew: boolean) {
   );
 }
 
-export function getShoppingList(opts: { days?: number; includeNew?: boolean } = {}) {
+export async function getShoppingList(opts: { days?: number; includeNew?: boolean } = {}) {
   const s = getSettings();
   const days = opts.days ?? s.shopping_horizon_days;
   const includeNew = opts.includeNew ?? false;
-  const orders = upcomingOrdersForShopping(days, includeNew);
-  const cat = new Catalog();
-  const { req, byItemOrders } = requirementsForOrders(
+  const orders = await upcomingOrdersForShopping(days, includeNew);
+  const cat = await Catalog.load();
+  const { req, byItemOrders } = await requirementsForOrders(
     orders.map((o) => o.id),
     cat,
   );
   const orderNumber = new Map(orders.map((o) => [o.id, o.number]));
-  const checks = new Set(all<{ item_id: number }>('SELECT item_id FROM shopping_checks').map((r) => r.item_id));
+  const checks = new Set((await all<{ item_id: number }>('SELECT item_id FROM shopping_checks')).map((r) => r.item_id));
 
   const items = [];
-  const allItems = all('SELECT * FROM inventory_items WHERE active = 1').map(mapItem);
+  const allItems = cat.allItems().filter((i) => i.active);
   for (const item of allItems) {
     const needed = req.get(item.id) || 0;
     const shortfall = needed + item.min_stock - item.quantity;
@@ -220,10 +220,10 @@ export function getShoppingList(opts: { days?: number; includeNew?: boolean } = 
   items.sort((a, b) =>
     a.kind === b.kind ? a.name.localeCompare(b.name, 'es') : a.kind === 'ingredient' ? -1 : 1,
   );
-  const extras = all('SELECT * FROM shopping_extras WHERE done = 0 OR done_at >= ? ORDER BY done, id', [
+  const extras = await all('SELECT * FROM shopping_extras WHERE done = 0 OR done_at >= ? ORDER BY done, id', [
     addDays(today(), -1),
   ]);
-  const recent = all(
+  const recent = await all(
     `SELECT e.*, (SELECT COUNT(*) FROM inventory_movements m WHERE m.expense_id = e.id) AS lines
        FROM expenses e
       WHERE e.date >= ? AND EXISTS (SELECT 1 FROM inventory_movements m WHERE m.expense_id = e.id)
@@ -264,17 +264,17 @@ export const purchaseSchema = z.object({
  * Registra una compra: suma stock, actualiza el precio de compra y anota el gasto
  * (separado en ingredientes y materiales).
  */
-export function registerPurchase(raw: unknown, userId: number | null) {
+export async function registerPurchase(raw: unknown, userId: number | null) {
   const input = purchaseSchema.parse(raw);
   if (!input.lines.length && !input.extra_ids.length) throw badRequest('No hay nada que registrar');
-  return tx(() => {
+  return tx(async () => {
     const date = input.date ?? today();
     const groups: Record<'ingredient' | 'material', { names: string[]; total: number; lines: typeof input.lines }> = {
       ingredient: { names: [], total: 0, lines: [] },
       material: { names: [], total: 0, lines: [] },
     };
     for (const l of input.lines) {
-      const item = get('SELECT * FROM inventory_items WHERE id = ?', [l.item_id]);
+      const item = await get('SELECT * FROM inventory_items WHERE id = ?', [l.item_id]);
       if (!item) throw notFound('Artículo');
       const g = groups[item.kind as 'ingredient' | 'material'];
       g.names.push(item.name.toLowerCase());
@@ -287,7 +287,7 @@ export function registerPurchase(raw: unknown, userId: number | null) {
       if (!g.lines.length) continue;
       let expenseId: number | null = null;
       if (input.register_expense && g.total > 0) {
-        expenseId = insert('expenses', {
+        expenseId = await insert('expenses', {
           date,
           category: kind === 'ingredient' ? 'ingredientes' : 'materiales',
           description: `Compra: ${g.names.slice(0, 6).join(', ')}${g.names.length > 6 ? '…' : ''}`,
@@ -300,7 +300,7 @@ export function registerPurchase(raw: unknown, userId: number | null) {
       }
       for (const l of g.lines) {
         const unitCost = l.total_cost > 0 ? l.total_cost / l.quantity : null;
-        insert('inventory_movements', {
+        await insert('inventory_movements', {
           item_id: l.item_id,
           type: 'purchase',
           quantity: l.quantity,
@@ -309,40 +309,40 @@ export function registerPurchase(raw: unknown, userId: number | null) {
           note: input.supplier ? `Compra en ${input.supplier}` : 'Compra',
           user_id: userId,
         });
-        run('UPDATE inventory_items SET quantity = quantity + ?, updated_at = ? WHERE id = ?', [
+        await run('UPDATE inventory_items SET quantity = quantity + ?, updated_at = ? WHERE id = ?', [
           l.quantity,
           nowIso(),
           l.item_id,
         ]);
         if (unitCost !== null && input.update_prices) {
-          run('UPDATE inventory_items SET cost_per_unit = ? WHERE id = ?', [round2(unitCost * 10000) / 10000, l.item_id]);
+          await run('UPDATE inventory_items SET cost_per_unit = ? WHERE id = ?', [round2(unitCost * 10000) / 10000, l.item_id]);
         }
         if (input.supplier) {
-          run("UPDATE inventory_items SET supplier = ? WHERE id = ? AND (supplier IS NULL OR supplier = '')", [
+          await run("UPDATE inventory_items SET supplier = ? WHERE id = ? AND (supplier IS NULL OR supplier = '')", [
             input.supplier,
             l.item_id,
           ]);
         }
-        run('DELETE FROM shopping_checks WHERE item_id = ?', [l.item_id]);
+        await run('DELETE FROM shopping_checks WHERE item_id = ?', [l.item_id]);
       }
     }
     for (const id of input.extra_ids) {
-      run('UPDATE shopping_extras SET done = 1, done_at = ? WHERE id = ?', [today(), id]);
+      await run('UPDATE shopping_extras SET done = 1, done_at = ? WHERE id = ?', [today(), id]);
     }
     return { expense_ids: expenseIds };
   });
 }
 
 /** Borra un gasto; si era una compra, también quita del inventario lo que sumó. */
-export function deleteExpense(id: number) {
-  tx(() => {
-    const e = get('SELECT * FROM expenses WHERE id = ?', [id]);
+export async function deleteExpense(id: number) {
+  await tx(async () => {
+    const e = await get('SELECT * FROM expenses WHERE id = ?', [id]);
     if (!e) throw notFound('Gasto');
-    const moves = all('SELECT * FROM inventory_movements WHERE expense_id = ?', [id]);
+    const moves = await all('SELECT * FROM inventory_movements WHERE expense_id = ?', [id]);
     for (const m of moves) {
-      run('UPDATE inventory_items SET quantity = quantity - ?, updated_at = ? WHERE id = ?', [m.quantity, nowIso(), m.item_id]);
+      await run('UPDATE inventory_items SET quantity = quantity - ?, updated_at = ? WHERE id = ?', [m.quantity, nowIso(), m.item_id]);
     }
-    run('DELETE FROM inventory_movements WHERE expense_id = ?', [id]);
-    run('DELETE FROM expenses WHERE id = ?', [id]);
+    await run('DELETE FROM inventory_movements WHERE expense_id = ?', [id]);
+    await run('DELETE FROM expenses WHERE id = ?', [id]);
   });
 }

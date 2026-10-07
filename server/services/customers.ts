@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { all, get, insert, update } from '../db/db.js';
+import { get, insert, update } from '../db/db.js';
 import { normPhone, parseJson } from '../lib/util.js';
 import { nowIso } from '../lib/clock.js';
 
@@ -32,48 +32,47 @@ export function mapCustomer(r: any) {
   return r ? { ...r, allergens: parseJson<string[]>(r.allergens, []) } : r;
 }
 
-export function findCustomerByPhone(phone?: string | null) {
+export async function findCustomerByPhone(phone?: string | null) {
   const p = normPhone(phone);
   if (p.length < 6) return undefined;
   // Comparación por dígitos (ignora espacios, guiones y prefijo +34).
-  const rows = all<{ id: number; phone: string }>("SELECT id, phone FROM customers WHERE phone IS NOT NULL AND phone <> ''");
-  const hit = rows.find((r) => normPhone(r.phone) === p);
-  return hit ? get('SELECT * FROM customers WHERE id = ?', [hit.id]) : undefined;
+  const hit = await get(`SELECT * FROM customers WHERE digits(phone) IN (?, ?) ORDER BY id LIMIT 1`, [p, `34${p}`]);
+  return hit;
 }
 
 export function createCustomer(data: CustomerInput) {
   return insert('customers', { ...data, allergens: JSON.stringify(data.allergens ?? []) });
 }
 
-export function updateCustomer(id: number, data: Partial<CustomerInput>) {
+export async function updateCustomer(id: number, data: Partial<CustomerInput>) {
   const patch: Record<string, unknown> = { ...data, updated_at: nowIso() };
   if (data.allergens) patch.allergens = JSON.stringify(data.allergens);
-  update('customers', id, patch);
+  await update('customers', id, patch);
 }
 
 /**
  * Busca o crea el cliente de un pedido/presupuesto.
  * Devuelve el id o null si no se debe guardar.
  */
-export function resolveCustomer(opts: {
+export async function resolveCustomer(opts: {
   customer_id?: number | null;
   name: string;
   phone?: string | null;
   address?: string | null;
   save: boolean;
-}): number | null {
+}): Promise<number | null> {
   if (opts.customer_id) {
-    const c = get('SELECT * FROM customers WHERE id = ?', [opts.customer_id]);
+    const c = await get('SELECT * FROM customers WHERE id = ?', [opts.customer_id]);
     if (c) {
       const patch: Record<string, unknown> = {};
       if (!c.phone && opts.phone) patch.phone = opts.phone;
       if (!c.address && opts.address) patch.address = opts.address;
-      if (Object.keys(patch).length) updateCustomer(c.id, patch);
+      if (Object.keys(patch).length) await updateCustomer(c.id, patch);
       return c.id;
     }
   }
   if (!opts.save) return null;
-  const byPhone = findCustomerByPhone(opts.phone);
+  const byPhone = await findCustomerByPhone(opts.phone);
   if (byPhone) return byPhone.id;
   return createCustomer({
     name: opts.name,

@@ -206,14 +206,22 @@ function UserSheet({ user, onClose }: { user?: User & { active: number }; onClos
   );
 }
 
+interface BackupRow {
+  id: number;
+  name: string;
+  kind: 'auto' | 'manual' | 'antes-de-restaurar';
+  size: number;
+  created_at: string;
+}
+
 function BackupSection() {
   const confirm = useConfirm();
   const toast = useToast();
   const file = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const res = useApi<{ name: string; size: number; created_at: string }[]>('/backups');
+  const res = useApi<BackupRow[]>('/backups');
   const create = useAction(() => api('/backups', { method: 'POST' }), { success: 'Copia de seguridad creada' });
-  const restoreNamed = useAction((name: string) => api(`/backups/restore/${encodeURIComponent(name)}`, { method: 'POST' }), {
+  const restoreOne = useAction((id: number) => api(`/backups/restore/${id}`, { method: 'POST' }), {
     success: 'Copia restaurada',
     onSuccess: () => setTimeout(() => window.location.reload(), 600),
   });
@@ -228,7 +236,7 @@ function BackupSection() {
     if (!ok) return;
     setBusy(true);
     try {
-      await api('/backups/restore', { method: 'POST', raw: f });
+      await api('/backups/restore', { method: 'POST', raw: new Blob([await f.arrayBuffer()], { type: 'application/gzip' }) });
       toast.show('Copia restaurada');
       setTimeout(() => window.location.reload(), 600);
     } catch (e) {
@@ -238,17 +246,18 @@ function BackupSection() {
       if (file.current) file.current.value = '';
     }
   };
-  const label = (n: string) => {
-    const m = n.match(/copia_(\d{4}-\d{2}-\d{2})_(\d{2})(\d{2})_(.+)\.sqlite/);
-    if (!m) return n;
-    const kind = m[4].startsWith('auto') ? 'automática' : m[4].startsWith('antes') ? 'antes de restaurar' : 'manual';
-    return `${m[1].split('-').reverse().join('/')} ${m[2]}:${m[3]} · ${kind}`;
+  const label = (b: BackupRow) => {
+    const d = new Date(b.created_at);
+    const when = d.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const kind = b.kind === 'auto' ? 'automática' : b.kind === 'antes-de-restaurar' ? 'antes de restaurar' : 'manual';
+    return `${when} · ${kind}`;
   };
   return (
     <Section title="Copias de seguridad">
       <Card className="p-4 space-y-3">
         <p className="text-sm text-choco-500">
-          Se hace una copia automática cada día (se guardan las últimas 30). Descarga una de vez en cuando y guárdala en otro sitio (tu ordenador, Google Drive…).
+          Cada noche se hace una copia automática (se guardan las últimas 30). Descarga una de vez en cuando y guárdala en otro sitio
+          (tu ordenador, Google Drive…). Las copias incluyen todos los datos; las fotos se quedan en la base de datos.
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           <a href="/api/backups/download/current">
@@ -257,21 +266,21 @@ function BackupSection() {
             </Button>
           </a>
           <Button variant="secondary" icon={<DatabaseBackup size={18} />} loading={create.isPending} onClick={() => create.mutate()}>
-            Guardar copia en el servidor
+            Guardar copia en la app
           </Button>
           <Button variant="outline" icon={<Upload size={18} />} loading={busy} onClick={() => file.current?.click()}>
             Restaurar desde archivo
           </Button>
-          <input ref={file} type="file" accept=".sqlite,.db,application/octet-stream" hidden onChange={(e) => upload(e.target.files?.[0])} />
+          <input ref={file} type="file" accept=".gz,.json,application/gzip,application/json" hidden onChange={(e) => upload(e.target.files?.[0])} />
         </div>
         {res.data && res.data.length > 0 && (
           <div className="divide-y divide-cream-200 border-t border-cream-200">
-            {res.data.slice(0, 12).map((b) => (
-              <div key={b.name} className="flex items-center gap-2 py-2 text-sm">
+            {res.data.slice(0, 15).map((b) => (
+              <div key={b.id} className="flex items-center gap-2 py-2 text-sm">
                 <span className="flex-1">
-                  {label(b.name)} <span className="text-choco-400">· {(b.size / 1024 / 1024).toFixed(1)} MB</span>
+                  {label(b)} <span className="text-choco-400">· {Math.max(1, Math.round(b.size / 1024))} KB</span>
                 </span>
-                <a href={`/api/backups/download/${encodeURIComponent(b.name)}`} className="p-2 text-choco-500 hover:text-berry-600" aria-label="Descargar" title="Descargar">
+                <a href={`/api/backups/download/${b.id}`} className="p-2 text-choco-500 hover:text-berry-600" aria-label="Descargar" title="Descargar">
                   <Download size={17} />
                 </a>
                 <button
@@ -280,8 +289,8 @@ function BackupSection() {
                   aria-label="Restaurar"
                   title="Restaurar"
                   onClick={async () =>
-                    (await confirm({ title: '¿Volver a esta copia?', text: `Los datos volverán a como estaban el ${label(b.name)}. Se guarda antes una copia del estado actual.`, ok: 'Restaurar', danger: true })) &&
-                    restoreNamed.mutate(b.name)
+                    (await confirm({ title: '¿Volver a esta copia?', text: `Los datos volverán a como estaban el ${label(b)}. Antes se guarda una copia del estado actual.`, ok: 'Restaurar', danger: true })) &&
+                    restoreOne.mutate(b.id)
                   }
                 >
                   <RotateCcw size={17} />

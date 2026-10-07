@@ -1,5 +1,5 @@
 // Carga de recetas/productos y cálculo de costes (escandallos) y necesidades de ingredientes.
-import { all, get } from '../db/db.js';
+import { all } from '../db/db.js';
 import { parseJson, round2 } from '../lib/util.js';
 import { getSettings } from './settings.js';
 import {
@@ -119,55 +119,50 @@ export function mapProductRow(r: any): Omit<Product, 'sizes' | 'components'> {
 }
 
 /**
- * Caché de catálogo para una operación: evita repetir consultas cuando se calculan
- * muchos pedidos a la vez (lista de la compra, producción...).
+ * Catálogo en memoria para una operación: se carga entero de una vez (pocas filas en
+ * una pastelería) y después todos los cálculos son síncronos.
  */
 export class Catalog {
-  private items = new Map<number, InventoryItem | null>();
-  private recipes = new Map<number, Recipe | null>();
-  private products = new Map<number, Product | null>();
+  private items = new Map<number, InventoryItem>();
+  private recipes = new Map<number, Recipe>();
+  private products = new Map<number, Product>();
+
+  static async load(): Promise<Catalog> {
+    const cat = new Catalog();
+    const [items, recipes, ings, products, sizes, comps] = await Promise.all([
+      all('SELECT * FROM inventory_items'),
+      all('SELECT * FROM recipes'),
+      all('SELECT * FROM recipe_ingredients ORDER BY sort, id'),
+      all('SELECT * FROM products'),
+      all<ProductSize>('SELECT * FROM product_sizes ORDER BY sort, id'),
+      all<ProductComponent>('SELECT * FROM product_components ORDER BY sort, id'),
+    ]);
+    for (const r of items) cat.items.set(r.id, mapItem(r));
+    for (const r of recipes) cat.recipes.set(r.id, { ...r, steps: parseJson<string[]>(r.steps, []), ingredients: [] });
+    for (const i of ings) {
+      const item = cat.items.get(i.item_id);
+      if (item) cat.recipes.get(i.recipe_id)?.ingredients.push({ ...i, item });
+    }
+    for (const r of products) cat.products.set(r.id, { ...mapProductRow(r), sizes: [], components: [] });
+    for (const s of sizes) cat.products.get(s.product_id)?.sizes.push(s);
+    for (const c of comps) cat.products.get(c.product_id)?.components.push(c);
+    return cat;
+  }
 
   item(id: number): InventoryItem | null {
-    if (!this.items.has(id)) {
-      const r = get('SELECT * FROM inventory_items WHERE id = ?', [id]);
-      this.items.set(id, r ? mapItem(r) : null);
-    }
-    return this.items.get(id)!;
+    return this.items.get(id) ?? null;
   }
 
   recipe(id: number): Recipe | null {
-    if (!this.recipes.has(id)) {
-      const r = get('SELECT * FROM recipes WHERE id = ?', [id]);
-      if (!r) {
-        this.recipes.set(id, null);
-      } else {
-        const ings = all('SELECT * FROM recipe_ingredients WHERE recipe_id = ? ORDER BY sort, id', [id]);
-        const ingredients: RecipeIngredient[] = [];
-        for (const i of ings) {
-          const item = this.item(i.item_id);
-          if (item) ingredients.push({ ...i, item });
-        }
-        this.recipes.set(id, { ...r, steps: parseJson<string[]>(r.steps, []), ingredients });
-      }
-    }
-    return this.recipes.get(id)!;
+    return this.recipes.get(id) ?? null;
   }
 
   product(id: number): Product | null {
-    if (!this.products.has(id)) {
-      const r = get('SELECT * FROM products WHERE id = ?', [id]);
-      if (!r) {
-        this.products.set(id, null);
-      } else {
-        const sizes = all<ProductSize>('SELECT * FROM product_sizes WHERE product_id = ? ORDER BY sort, id', [id]);
-        const components = all<ProductComponent>(
-          'SELECT * FROM product_components WHERE product_id = ? ORDER BY sort, id',
-          [id],
-        );
-        this.products.set(id, { ...mapProductRow(r), sizes, components });
-      }
-    }
-    return this.products.get(id)!;
+    return this.products.get(id) ?? null;
+  }
+
+  allItems() {
+    return [...this.items.values()];
   }
 }
 
@@ -240,20 +235,25 @@ export function addLineRequirements(cat: Catalog, req: Requirements, line: LineL
   }
 }
 
-export function requirementsForLines(lines: LineLike[], cat = new Catalog()): Requirements {
+export function requirementsForLines(lines: LineLike[], cat: Catalog): Requirements {
   const req: Requirements = new Map();
   for (const l of lines) addLineRequirements(cat, req, l);
   return req;
 }
 
-export function requirementsForOrders(orderIds: number[], cat = new Catalog()) {
+export async function requirementsForOrders(orderIds: number[], cat: Catalog) {
   const req: Requirements = new Map();
   const byItemOrders = new Map<number, Set<number>>();
+  if (!orderIds.length) return { req, byItemOrders };
+  const lines = await all<LineLike & { order_id: number }>(
+    `SELECT order_id, product_id, size_id, quantity, servings FROM order_items WHERE order_id IN (${orderIds.map(() => '?').join(',')})`,
+    orderIds,
+  );
   for (const id of orderIds) {
-    const lines = all<LineLike>('SELECT product_id, size_id, quantity, servings FROM order_items WHERE order_id = ?', [
-      id,
-    ]);
-    const r = requirementsForLines(lines, cat);
+    const r = requirementsForLines(
+      lines.filter((l) => l.order_id === id),
+      cat,
+    );
     for (const [itemId, q] of r) {
       req.set(itemId, (req.get(itemId) || 0) + q);
       if (!byItemOrders.has(itemId)) byItemOrders.set(itemId, new Set());

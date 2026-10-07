@@ -1,21 +1,14 @@
 import express, { Router, type Request } from 'express';
-import fs from 'node:fs';
 import { z } from 'zod';
 import { all, get, insert, run } from '../db/db.js';
-import { can, h, permissions, requireAdmin } from '../http.js';
-import { today } from '../lib/clock.js';
+import { can, COOKIE, h, permissions, requireAdmin } from '../http.js';
+import { addDays, today } from '../lib/clock.js';
 import { badRequest, forbidden, notFound, toId } from '../lib/util.js';
 import { getSettings, saveSettings } from '../services/settings.js';
-import { createUser, deleteUser, listUsers, updateUser } from '../services/auth.js';
+import { createUser, deleteUser, listUsers, tokenHash, updateUser } from '../services/auth.js';
 import { getDashboard, getReminders, search } from '../services/dashboard.js';
 import { runAutomations } from '../services/orders.js';
-import {
-  backupFile,
-  createBackup,
-  listBackups,
-  restoreBackup,
-  snapshotToTemp,
-} from '../services/backup.js';
+import { backupData, createBackup, exportData, listBackups, restoreData } from '../services/backup.js';
 import { DEFAULT_SETTINGS, type Settings } from '../../shared/constants.js';
 
 export const coreRouter = Router();
@@ -78,7 +71,7 @@ const settingsSchema = z
 coreRouter.put(
   '/settings',
   requireAdmin,
-  h((req) => {
+  h(async (req) => {
     const patch = settingsSchema.parse(req.body);
     if (patch.timezone) {
       try {
@@ -98,7 +91,7 @@ coreRouter.get('/settings/defaults', requireAdmin, h(() => DEFAULT_SETTINGS));
 // ---------------------------------------------------------------------------
 
 coreRouter.get('/users', requireAdmin, h(() => listUsers()));
-coreRouter.post('/users', requireAdmin, h((req) => ({ id: createUser(req.body) })));
+coreRouter.post('/users', requireAdmin, h(async (req) => ({ id: await createUser(req.body) })));
 coreRouter.put(
   '/users/:id',
   requireAdmin,
@@ -107,10 +100,10 @@ coreRouter.put(
 coreRouter.delete(
   '/users/:id',
   requireAdmin,
-  h((req) => {
+  h(async (req) => {
     const id = toId(req.params.id);
     if (id === req.user!.id) throw badRequest('No puedes borrar tu propio usuario');
-    deleteUser(id);
+    await deleteUser(id);
   }),
 );
 
@@ -120,23 +113,23 @@ coreRouter.delete(
 
 coreRouter.get(
   '/dashboard',
-  h((req) => {
-    runAutomations();
-    return { ...getDashboard({ finances: can(req, 'perm_finances') }), permissions: permissions(req) };
+  h(async (req) => {
+    await runAutomations();
+    return { ...(await getDashboard({ finances: can(req, 'perm_finances') })), permissions: permissions(req) };
   }),
 );
 
 coreRouter.get(
   '/reminders',
-  h(() => {
-    runAutomations();
+  h(async () => {
+    await runAutomations();
     return getReminders();
   }),
 );
 
 coreRouter.post(
   '/reminders',
-  h((req) => {
+  h(async (req) => {
     const input = z
       .object({
         text: z.string().trim().min(1, 'Escribe el recordatorio').max(500),
@@ -145,7 +138,7 @@ coreRouter.post(
       })
       .parse(req.body);
     return {
-      id: insert('reminders', {
+      id: await insert('reminders', {
         text: input.text,
         due_date: input.due_date ?? null,
         order_id: input.order_id ?? null,
@@ -160,24 +153,24 @@ coreRouter.get(
   h(() =>
     all(
       `SELECT r.*, o.number AS order_number FROM reminders r LEFT JOIN orders o ON o.id = r.order_id
-        WHERE r.done = 0 OR r.created_at >= date(?, '-7 days') ORDER BY r.done, r.due_date IS NULL, r.due_date`,
-      [today()],
+        WHERE r.done = 0 OR r.created_at >= ? ORDER BY r.done, r.due_date IS NULL, r.due_date`,
+      [addDays(today(), -7)],
     ),
   ),
 );
 
 coreRouter.patch(
   '/reminders/:id',
-  h((req) => {
+  h(async (req) => {
     const { done } = z.object({ done: z.boolean() }).parse(req.body);
-    run('UPDATE reminders SET done = ? WHERE id = ?', [done ? 1 : 0, toId(req.params.id)]);
+    await run('UPDATE reminders SET done = ? WHERE id = ?', [done ? 1 : 0, toId(req.params.id)]);
   }),
 );
 
 coreRouter.delete(
   '/reminders/:id',
-  h((req) => {
-    run('DELETE FROM reminders WHERE id = ?', [toId(req.params.id)]);
+  h(async (req) => {
+    await run('DELETE FROM reminders WHERE id = ?', [toId(req.params.id)]);
   }),
 );
 
@@ -194,25 +187,29 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 coreRouter.post(
   '/images',
-  express.raw({ type: IMAGE_TYPES, limit: '8mb' }),
-  h((req) => {
+  express.raw({ type: IMAGE_TYPES, limit: '4mb' }),
+  h(async (req) => {
     const type = String(req.headers['content-type'] || '').split(';')[0];
     if (!IMAGE_TYPES.includes(type) || !Buffer.isBuffer(req.body) || !req.body.length) {
       throw badRequest('Sube una imagen JPG, PNG o WEBP');
     }
-    return { id: insert('images', { mime: type, data: req.body }) };
+    return { id: await insert('images', { mime: type, data: req.body }) };
   }),
 );
 
-coreRouter.get('/images/:id', (req, res) => {
-  const img = get<{ mime: string; data: Buffer }>('SELECT mime, data FROM images WHERE id = ?', [toId(req.params.id)]);
-  if (!img) {
-    res.status(404).end();
-    return;
+coreRouter.get('/images/:id', async (req, res, next) => {
+  try {
+    const img = await get<{ mime: string; data: Buffer }>('SELECT mime, data FROM images WHERE id = ?', [toId(req.params.id)]);
+    if (!img) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader('Content-Type', img.mime);
+    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
+    res.send(img.data);
+  } catch (e) {
+    next(e);
   }
-  res.setHeader('Content-Type', img.mime);
-  res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-  res.send(img.data);
 });
 
 // ---------------------------------------------------------------------------
@@ -220,43 +217,55 @@ coreRouter.get('/images/:id', (req, res) => {
 // ---------------------------------------------------------------------------
 
 coreRouter.get('/backups', requireAdmin, h(() => listBackups()));
-coreRouter.post('/backups', requireAdmin, h(() => ({ name: createBackup('manual') })));
+coreRouter.post('/backups', requireAdmin, h(() => createBackup('manual')));
 
-coreRouter.get('/backups/download/current', requireAdmin, (req, res, next) => {
+function sendBackup(res: express.Response, name: string, data: Buffer) {
+  res.setHeader('Content-Type', 'application/gzip');
+  res.setHeader('Content-Disposition', `attachment; filename="${name}.json.gz"`);
+  res.send(data);
+}
+
+coreRouter.get('/backups/download/current', requireAdmin, async (_req, res, next) => {
   try {
-    const tmp = snapshotToTemp();
-    res.download(tmp, `copia-pasteleria-${today()}.sqlite`, () => fs.rmSync(tmp, { force: true }));
+    sendBackup(res, `copia-pasteleria-${today()}`, await exportData());
   } catch (e) {
     next(e);
   }
 });
 
-coreRouter.get('/backups/download/:name', requireAdmin, (req, res) => {
-  const file = backupFile(String(req.params.name));
-  if (!file) {
-    res.status(404).json({ error: 'Copia no encontrada' });
-    return;
+coreRouter.get('/backups/download/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const b = await backupData(toId(req.params.id));
+    sendBackup(res, b.name, b.data);
+  } catch (e) {
+    next(e);
   }
-  res.download(file);
 });
+
+/** Datos de la sesión actual para no echar a quien restaura. */
+async function currentSession(req: Request) {
+  const token = req.cookies?.[COOKIE];
+  if (!token || !req.user) return undefined;
+  const s = await get('SELECT expires_at FROM sessions WHERE token_hash = ?', [tokenHash(token)]);
+  return s ? { tokenHash: tokenHash(token), userId: req.user.id, expires: s.expires_at } : undefined;
+}
 
 coreRouter.post(
   '/backups/restore',
   requireAdmin,
-  express.raw({ type: () => true, limit: '500mb' }),
-  h((req) => {
+  express.raw({ type: () => true, limit: '4mb' }),
+  h(async (req) => {
     if (!Buffer.isBuffer(req.body) || !req.body.length) throw badRequest('Selecciona un archivo de copia');
-    restoreBackup(req.body);
+    await restoreData(req.body, await currentSession(req));
   }),
 );
 
 coreRouter.post(
-  '/backups/restore/:name',
+  '/backups/restore/:id',
   requireAdmin,
-  h((req) => {
-    const file = backupFile(String(req.params.name));
-    if (!file) throw notFound('Copia');
-    restoreBackup(fs.readFileSync(file));
+  h(async (req) => {
+    const b = await backupData(toId(req.params.id));
+    await restoreData(b.data, await currentSession(req));
   }),
 );
 
@@ -280,7 +289,7 @@ const EXPORTS: Record<string, { finance?: boolean; sql: string; columns: [string
     sql: `SELECT o.number, o.order_date, o.delivery_date, o.delivery_time, o.customer_name, o.customer_phone, o.status,
                  o.delivery_type, o.total,
                  (SELECT COALESCE(SUM(CASE WHEN p.kind='refund' THEN -p.amount ELSE p.amount END),0) FROM payments p WHERE p.order_id=o.id) AS paid,
-                 (SELECT GROUP_CONCAT(oi.quantity || ' x ' || oi.product_name, ' | ') FROM order_items oi WHERE oi.order_id=o.id) AS products
+                 (SELECT string_agg(oi.quantity::text || ' x ' || oi.product_name, ' | ') FROM order_items oi WHERE oi.order_id=o.id) AS products
             FROM orders o ORDER BY o.number`,
     columns: [
       ['number', 'Nº pedido'],
@@ -348,13 +357,13 @@ const EXPORTS: Record<string, { finance?: boolean; sql: string; columns: [string
   },
 };
 
-coreRouter.get('/export/:what', (req, res, next) => {
+coreRouter.get('/export/:what', async (req, res, next) => {
   try {
     const def = EXPORTS[String(req.params.what)];
     if (!def) throw notFound('Exportación');
     if (def.finance && !can(req, 'perm_finances')) throw forbidden();
     if (req.user?.role !== 'admin' && !def.finance && !can(req, 'perm_finances')) throw forbidden();
-    const body = csv(all(def.sql), def.columns);
+    const body = csv(await all(def.sql), def.columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${req.params.what}-${today()}.csv"`);
     res.send(body);

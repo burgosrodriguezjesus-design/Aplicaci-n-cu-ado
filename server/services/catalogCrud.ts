@@ -47,18 +47,18 @@ export const recipeSchema = z.object({
     .default([]),
 });
 
-function checkUnit(itemId: number, unit: Unit) {
-  const item = get('SELECT name, unit FROM inventory_items WHERE id = ?', [itemId]);
+async function checkUnit(itemId: number, unit: Unit) {
+  const item = await get('SELECT name, unit FROM inventory_items WHERE id = ?', [itemId]);
   if (!item) throw badRequest('Uno de los ingredientes ya no existe');
   if (UNIT_INFO[item.unit as Unit].family !== UNIT_INFO[unit].family) {
     throw badRequest(`La unidad de "${item.name}" no es compatible (en inventario está en ${item.unit})`);
   }
 }
 
-export function saveRecipe(raw: unknown, id?: number) {
+export async function saveRecipe(raw: unknown, id?: number) {
   const input = recipeSchema.parse(raw);
-  return tx(() => {
-    input.ingredients.forEach((i) => checkUnit(i.item_id, i.unit));
+  return tx(async () => {
+    for (const i of input.ingredients) await checkUnit(i.item_id, i.unit);
     const { ingredients, steps, ...data } = input;
     const row = {
       ...data,
@@ -70,20 +70,20 @@ export function saveRecipe(raw: unknown, id?: number) {
       steps: JSON.stringify(steps.filter(Boolean)),
     };
     if (id) {
-      if (!get('SELECT id FROM recipes WHERE id = ?', [id])) throw notFound('Receta');
-      update('recipes', id, { ...row, updated_at: nowIso() });
-      run('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [id]);
+      if (!(await get('SELECT id FROM recipes WHERE id = ?', [id]))) throw notFound('Receta');
+      await update('recipes', id, { ...row, updated_at: nowIso() });
+      await run('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [id]);
     } else {
-      id = insert('recipes', row);
+      id = await insert('recipes', row);
     }
-    ingredients.forEach((ing, i) => insert('recipe_ingredients', { recipe_id: id, ...ing, sort: i }));
+    for (const [i, ing] of ingredients.entries()) await insert('recipe_ingredients', { recipe_id: id, ...ing, sort: i });
     return id!;
   });
 }
 
-export function listRecipes(costs: boolean) {
-  const cat = new Catalog();
-  return all('SELECT id FROM recipes ORDER BY name COLLATE NOCASE').map((r) => {
+export async function listRecipes(costs: boolean) {
+  const cat = await Catalog.load();
+  return (await all('SELECT id FROM recipes ORDER BY lower(name)')).map((r) => {
     const recipe = cat.recipe(r.id)!;
     const c = costs ? recipeCost(recipe) : null;
     return {
@@ -103,14 +103,14 @@ export function listRecipes(costs: boolean) {
   });
 }
 
-export function getRecipe(id: number, servings: number | null, costs: boolean) {
-  const cat = new Catalog();
+export async function getRecipe(id: number, servings: number | null, costs: boolean) {
+  const cat = await Catalog.load();
   const recipe = cat.recipe(id);
   if (!recipe) throw notFound('Receta');
   const target = servings && servings > 0 ? servings : recipe.servings;
   const scaled = recipeCost(recipe, target);
   const base = recipeCost(recipe);
-  const usedIn = all(
+  const usedIn = await all(
     `SELECT DISTINCT p.id, p.name FROM product_components pc JOIN products p ON p.id = pc.product_id WHERE pc.recipe_id = ? ORDER BY p.name`,
     [id],
   );
@@ -145,10 +145,10 @@ export function getRecipe(id: number, servings: number | null, costs: boolean) {
   };
 }
 
-export function deleteRecipe(id: number) {
-  const used = get('SELECT COUNT(*) AS n FROM product_components WHERE recipe_id = ?', [id])!.n;
+export async function deleteRecipe(id: number) {
+  const used = (await get('SELECT COUNT(*) AS n FROM product_components WHERE recipe_id = ?', [id]))!.n;
   if (used) throw badRequest('Esta receta se usa en productos del catálogo. Quítala de ellos primero.');
-  run('DELETE FROM recipes WHERE id = ?', [id]);
+  await run('DELETE FROM recipes WHERE id = ?', [id]);
 }
 
 // ---------------------------------------------------------------------------
@@ -198,9 +198,9 @@ export const productSchema = z.object({
     .default([]),
 });
 
-export function saveProduct(raw: unknown, id?: number) {
+export async function saveProduct(raw: unknown, id?: number) {
   const input = productSchema.parse(raw);
-  return tx(() => {
+  return tx(async () => {
     const { sizes, components, flavors, fillings, coverings, extras, stages, active, ...data } = input;
     const row = {
       ...data,
@@ -213,46 +213,47 @@ export function saveProduct(raw: unknown, id?: number) {
       active: active ? 1 : 0,
     };
     if (id) {
-      if (!get('SELECT id FROM products WHERE id = ?', [id])) throw notFound('Producto');
-      update('products', id, { ...row, updated_at: nowIso() });
+      if (!(await get('SELECT id FROM products WHERE id = ?', [id]))) throw notFound('Producto');
+      await update('products', id, { ...row, updated_at: nowIso() });
     } else {
-      id = insert('products', row);
+      id = await insert('products', row);
     }
     // Tamaños (se conservan los id para no romper pedidos existentes)
-    const existing = new Set(all<{ id: number }>('SELECT id FROM product_sizes WHERE product_id = ?', [id]).map((r) => r.id));
+    const existing = new Set((await all<{ id: number }>('SELECT id FROM product_sizes WHERE product_id = ?', [id])).map((r) => r.id));
     const sizeIds: number[] = [];
-    sizes.forEach((s, i) => {
+    for (const [i, s] of sizes.entries()) {
       if (s.id && existing.has(s.id)) {
-        update('product_sizes', s.id, { name: s.name, servings: s.servings, price: s.price, sort: i });
+        await update('product_sizes', s.id, { name: s.name, servings: s.servings, price: s.price, sort: i });
         sizeIds.push(s.id);
       } else {
-        sizeIds.push(insert('product_sizes', { product_id: id, name: s.name, servings: s.servings, price: s.price, sort: i }));
+        sizeIds.push(await insert('product_sizes', { product_id: id, name: s.name, servings: s.servings, price: s.price, sort: i }));
       }
-    });
-    run('DELETE FROM product_components WHERE product_id = ?', [id]);
-    for (const sid of existing) if (!sizeIds.includes(sid)) run('DELETE FROM product_sizes WHERE id = ?', [sid]);
-    components.forEach((c, i) => {
-      if (c.item_id && c.unit) checkUnit(c.item_id, c.unit);
-      if (c.recipe_id && !get('SELECT id FROM recipes WHERE id = ?', [c.recipe_id])) throw badRequest('Una de las recetas ya no existe');
-      insert('product_components', {
+    }
+    await run('DELETE FROM product_components WHERE product_id = ?', [id]);
+    for (const sid of existing) if (!sizeIds.includes(sid)) await run('DELETE FROM product_sizes WHERE id = ?', [sid]);
+    for (const [i, c] of components.entries()) {
+      if (c.item_id && c.unit) await checkUnit(c.item_id, c.unit);
+      if (c.recipe_id && !(await get('SELECT id FROM recipes WHERE id = ?', [c.recipe_id]))) throw badRequest('Una de las recetas ya no existe');
+      const itemUnit = c.item_id ? (await get('SELECT unit FROM inventory_items WHERE id = ?', [c.item_id]))?.unit : null;
+      await insert('product_components', {
         product_id: id,
         recipe_id: c.recipe_id ?? null,
         item_id: c.item_id ?? null,
         quantity: c.quantity,
-        unit: c.item_id ? (c.unit ?? get('SELECT unit FROM inventory_items WHERE id = ?', [c.item_id])?.unit ?? 'ud') : null,
+        unit: c.item_id ? (c.unit ?? itemUnit ?? 'ud') : null,
         per_serving: c.item_id && c.per_serving ? 1 : 0,
         size_id: c.size_index != null ? (sizeIds[c.size_index] ?? null) : null,
         sort: i,
       });
-    });
+    }
     return id!;
   });
 }
 
-export function listProducts(opts: { costs: boolean; includeInactive?: boolean }) {
-  const cat = new Catalog();
-  const rows = all(
-    `SELECT id FROM products ${opts.includeInactive ? '' : 'WHERE active = 1'} ORDER BY sort, category, name COLLATE NOCASE`,
+export async function listProducts(opts: { costs: boolean; includeInactive?: boolean }) {
+  const cat = await Catalog.load();
+  const rows = await all(
+    `SELECT id FROM products ${opts.includeInactive ? '' : 'WHERE active = 1'} ORDER BY sort, category, lower(name)`,
   );
   return rows.map((r) => productView(cat, r.id, opts.costs));
 }
@@ -287,18 +288,18 @@ export function productView(cat: Catalog, id: number, costs: boolean) {
   };
 }
 
-export function deleteProduct(id: number) {
-  const used = get('SELECT COUNT(*) AS n FROM order_items WHERE product_id = ?', [id])!.n;
+export async function deleteProduct(id: number) {
+  const used = (await get('SELECT COUNT(*) AS n FROM order_items WHERE product_id = ?', [id]))!.n;
   if (used) {
-    run('UPDATE products SET active = 0 WHERE id = ?', [id]);
+    await run('UPDATE products SET active = 0 WHERE id = ?', [id]);
     return { archived: true };
   }
-  run('DELETE FROM products WHERE id = ?', [id]);
+  await run('DELETE FROM products WHERE id = ?', [id]);
   return { archived: false };
 }
 
-export function productCosting(id: number, sizeId: number | null, servings: number | null) {
-  const cat = new Catalog();
+export async function productCosting(id: number, sizeId: number | null, servings: number | null) {
+  const cat = await Catalog.load();
   const p = cat.product(id);
   if (!p) throw notFound('Producto');
   return productCost(cat, p, { sizeId, servings });
