@@ -57,6 +57,8 @@ datos se guardan en una base de datos en tu propio servidor.
 
 ## Dónde está instalada
 
+👉 **https://obrador-pasteleria.vercel.app**
+
 La versión en internet funciona con **Vercel** (la web y la API) y **Supabase** (la base de datos PostgreSQL, en París):
 
 - La web se sirve desde el CDN de Vercel y la API es una función en París (`cdg1`), junto a la base de datos.
@@ -71,6 +73,9 @@ Variables de entorno en Vercel:
 | `DATABASE_URL` | Conexión a Postgres (pooler de Supabase en modo transacción, puerto 6543) |
 | `SETUP_CODE` | Código que pide la pantalla de instalación inicial (para que nadie más pueda crear el administrador) |
 | `CRON_SECRET` | Protege la tarea diaria |
+
+> Supabase (plan gratuito) pausa los proyectos que pasan una semana sin ningún uso. Con el uso diario
+> y la tarea nocturna no debería ocurrir; si alguna vez pasa, se reactiva desde el panel de Supabase.
 
 ## Ponerla en marcha en tu propio ordenador o servidor
 
