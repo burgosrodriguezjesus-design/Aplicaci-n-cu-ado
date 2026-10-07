@@ -252,7 +252,7 @@ async function setImages(orderId: number, imageIds: number[]) {
 export async function duplicateOrder(id: number, userId: number | null, deliveryDate?: string) {
   const order = await get('SELECT * FROM orders WHERE id = ?', [id]);
   if (!order) throw notFound('Pedido');
-  const items = (await loadLines('order_items', id)).map(({ id: _id, sort: _s, line_total: _t, size_name: _sn, ...l }) => l);
+  const items = (await loadLines('order_items', id)).map(({ id: _id, sort: _s, size_name: _sn, ...l }) => l);
   return createOrder(
     {
       customer_id: order.customer_id,

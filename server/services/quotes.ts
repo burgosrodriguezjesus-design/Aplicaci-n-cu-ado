@@ -165,6 +165,7 @@ export async function convertQuote(id: number, raw: unknown, userId: number | nu
           notes: l.notes,
           extras: l.extras,
           unit_price: l.unit_price,
+          line_total: l.line_total,
         })),
       },
       userId,

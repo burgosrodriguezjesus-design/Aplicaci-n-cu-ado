@@ -692,7 +692,7 @@ export async function seedDemo(userId: number) {
       delivery_type: 'delivery',
       delivery_address: 'Plaza del Carmen 3',
       delivery_fee: 5,
-      discount: 15,
+      discount: 0,
       notes: 'Evento de empresa para 100 personas. Descuento por volumen.',
       items: [
         { product_id: P.cheesecake, size_id: size(P.cheesecake, 1), quantity: 4, flavor: 'Clásica' },

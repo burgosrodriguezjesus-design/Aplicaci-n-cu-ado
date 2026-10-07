@@ -6,8 +6,6 @@ import {
   ALLERGENS,
   CATEGORY_LABELS,
   COMMON_ALLERGENS,
-  PAYMENT_METHOD_LABELS,
-  PAYMENT_METHODS,
   PRODUCT_CATEGORIES,
   type Allergen,
 } from '@shared/constants';
@@ -44,6 +42,8 @@ type Mode = 'order' | 'quote';
 interface Line extends OrderLine {
   key: string;
   manualPrice: boolean;
+  /** Lo que cuesta este producto (total de la línea). */
+  price: number;
 }
 
 interface FormState {
@@ -58,14 +58,11 @@ interface FormState {
   delivery_type: 'pickup' | 'delivery';
   delivery_address: string;
   delivery_fee: number;
-  discount: number;
   payment_method: string | null;
   allergens: string[];
   notes: string;
   items: Line[];
   image_ids: number[];
-  deposit_amount: number | null;
-  deposit_method: string;
   confirmed: boolean;
   valid_until: string;
 }
@@ -84,9 +81,17 @@ export function autoPrice(p: Product, sizeId: number | null, servings: number | 
   return p.base_price;
 }
 
+const extrasSum = (l: { extras: Extra[] }) => l.extras.reduce((s, e) => s + e.price, 0);
+
+/** Precio de catálogo de la línea entera (cantidad, tamaño, raciones y extras). */
+export function catalogPrice(p: Product, l: Pick<Line, 'size_id' | 'servings' | 'quantity' | 'extras'>) {
+  return round2(autoPrice(p, l.size_id, l.servings) * l.quantity + extrasSum(l));
+}
+
 function lineFromProduct(p: Product): Line {
   const size = p.sizes[0] ?? null;
   const servings = size ? size.servings : p.servings;
+  const unit_price = autoPrice(p, size?.id ?? null, servings);
   return {
     key: newKey(),
     manualPrice: false,
@@ -102,7 +107,8 @@ function lineFromProduct(p: Product): Line {
     custom_text: null,
     notes: null,
     extras: [],
-    unit_price: autoPrice(p, size?.id ?? null, servings),
+    unit_price,
+    price: unit_price,
   };
 }
 
@@ -124,10 +130,9 @@ function lineFromExisting(l: OrderLine, keepId: boolean): Line {
     notes: l.notes,
     extras: l.extras ?? [],
     unit_price: l.unit_price,
+    price: l.line_total ?? round2(l.unit_price * l.quantity + extrasSum({ extras: l.extras ?? [] })),
   };
 }
-
-const lineTotal = (l: Line) => round2(l.unit_price * l.quantity + l.extras.reduce((s, e) => s + e.price, 0));
 
 export function OrderForm({ mode }: { mode: Mode }) {
   const { id } = useParams();
@@ -158,14 +163,11 @@ export function OrderForm({ mode }: { mode: Mode }) {
       delivery_type: 'pickup',
       delivery_address: '',
       delivery_fee: settings.default_delivery_fee ?? 0,
-      discount: 0,
       payment_method: null,
       allergens: [],
       notes: '',
       items: [],
       image_ids: [],
-      deposit_amount: null,
-      deposit_method: 'bizum',
       confirmed: false,
       valid_until: '',
     };
@@ -184,7 +186,6 @@ export function OrderForm({ mode }: { mode: Mode }) {
         delivery_type: o.delivery_type,
         delivery_address: o.delivery_address ?? '',
         delivery_fee: o.delivery_fee || (settings.default_delivery_fee ?? 0),
-        discount: o.discount,
         payment_method: o.payment_method ?? null,
         allergens: o.allergens,
         notes: o.notes ?? '',
@@ -247,7 +248,7 @@ export function OrderForm({ mode }: { mode: Mode }) {
         custom_text: l.custom_text,
         notes: l.notes,
         extras: l.extras,
-        unit_price: l.unit_price,
+        line_total: l.price,
       }));
       const common = {
         customer_id: form.customer_id,
@@ -258,7 +259,7 @@ export function OrderForm({ mode }: { mode: Mode }) {
         delivery_type: form.delivery_type,
         delivery_address: form.delivery_address || null,
         delivery_fee: form.delivery_fee,
-        discount: form.discount,
+        discount: 0,
         allergens: form.allergens,
         notes: form.notes || null,
         items,
@@ -278,7 +279,6 @@ export function OrderForm({ mode }: { mode: Mode }) {
           ? {}
           : {
               status: form.confirmed ? 'confirmado' : 'nuevo',
-              deposit: form.deposit_amount ? { amount: form.deposit_amount, method: form.deposit_method } : null,
             }),
       };
       return editing ? api(`/orders/${id}`, { method: 'PUT', body }) : api('/orders', { method: 'POST', body });
@@ -301,18 +301,18 @@ export function OrderForm({ mode }: { mode: Mode }) {
         if (l.key !== key) return l;
         const next = { ...l, ...patch };
         const p = next.product_id ? productMap.get(next.product_id) : null;
-        if (p && !next.manualPrice && ('size_id' in patch || 'servings' in patch)) {
-          next.unit_price = autoPrice(p, next.size_id, next.servings);
+        // Si el precio era el de catálogo, se recalcula al cambiar cantidad, tamaño o extras.
+        if (p && !('price' in patch) && (!next.manualPrice || l.price === catalogPrice(p, l))) {
+          next.price = catalogPrice(p, next);
+          next.manualPrice = false;
         }
         return next;
       });
       return { ...s!, items };
     });
 
-  const subtotal = round2(f.items.reduce((s, l) => s + lineTotal(l), 0));
-  const total = Math.max(0, round2(subtotal + (f.delivery_type === 'delivery' ? f.delivery_fee : 0) - f.discount));
-  const paidBefore = editing && mode === 'order' ? (existing.data?.paid ?? 0) : f.deposit_amount ?? 0;
-  const pending = Math.max(0, round2(total - paidBefore));
+  const subtotal = round2(f.items.reduce((s, l) => s + l.price, 0));
+  const total = round2(subtotal + (f.delivery_type === 'delivery' ? f.delivery_fee : 0));
 
   // Alérgenos de los productos elegidos que choca con lo que hay que evitar.
   const contains = new Set<string>();
@@ -423,71 +423,7 @@ export function OrderForm({ mode }: { mode: Mode }) {
           </FormSection>
         )}
 
-        {/* Pago */}
-        <FormSection n={mode === 'order' ? 6 : 5} title={mode === 'order' ? 'Precio y pago' : 'Precio'}>
-          <div className="space-y-4">
-            <div className="rounded-xl bg-cream-100 p-3 space-y-1 text-[15px]">
-              <Row label="Productos" value={money(subtotal)} />
-              {f.delivery_type === 'delivery' && <Row label="Envío" value={money(f.delivery_fee)} />}
-              {f.discount > 0 && <Row label="Descuento" value={`− ${money(f.discount)}`} />}
-              <Row label={<b>Total</b>} value={<b className="text-lg">{money(total)}</b>} />
-            </div>
-            <Field label="Descuento">
-              <NumberInput value={f.discount} onChange={(v) => set({ discount: v ?? 0 })} suffix="€" />
-            </Field>
-            {mode === 'order' && !editing && (
-              <div className="space-y-2">
-                <span className="label">Señal / anticipo pagado</span>
-                <div className="flex gap-2 items-center">
-                  <NumberInput
-                    className="flex-1"
-                    value={f.deposit_amount}
-                    placeholder="0"
-                    onChange={(v) => set({ deposit_amount: v, confirmed: v && v > 0 ? true : f.confirmed })}
-                    suffix="€"
-                  />
-                  {total > 0 && (settings.deposit_percent ?? 0) > 0 && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => set({ deposit_amount: round2((total * (settings.deposit_percent ?? 30)) / 100), confirmed: true })}
-                    >
-                      {settings.deposit_percent} % = {money(round2((total * (settings.deposit_percent ?? 30)) / 100))}
-                    </Button>
-                  )}
-                </div>
-                {!!f.deposit_amount && (
-                  <div className="flex flex-wrap gap-2">
-                    {PAYMENT_METHODS.map((m) => (
-                      <Chip key={m} active={f.deposit_method === m} onClick={() => set({ deposit_method: m })}>
-                        {PAYMENT_METHOD_LABELS[m]}
-                      </Chip>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {mode === 'order' && (
-              <div>
-                <span className="label">Cómo va a pagar</span>
-                <div className="flex flex-wrap gap-2">
-                  {PAYMENT_METHODS.map((m) => (
-                    <Chip key={m} active={f.payment_method === m} onClick={() => set({ payment_method: f.payment_method === m ? null : m })}>
-                      {PAYMENT_METHOD_LABELS[m]}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-            )}
-            {mode === 'order' && (
-              <div className="flex justify-between rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 font-bold">
-                <span>{editing ? `Cobrado ${money(paidBefore)} · Queda por cobrar` : 'Quedará por cobrar'}</span>
-                <span className="text-amber-800">{money(pending)}</span>
-              </div>
-            )}
-          </div>
-        </FormSection>
-
-        <FormSection n={mode === 'order' ? 7 : 6} title="Notas">
+        <FormSection n={mode === 'order' ? 6 : 5} title="Notas">
           <Textarea value={f.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Cualquier detalle importante: quién recoge, horario, sorpresas…" />
         </FormSection>
 
@@ -544,15 +480,6 @@ export function OrderForm({ mode }: { mode: Mode }) {
           setPicker(false);
         }}
       />
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-3">
-      <span className="text-choco-700">{label}</span>
-      <span className="tabular-nums">{value}</span>
     </div>
   );
 }
@@ -713,7 +640,6 @@ function LineEditor({
   onChange: (p: Partial<Line>) => void;
   onRemove: () => void;
 }) {
-  const [editPrice, setEditPrice] = useState(false);
   const cakeLike = !product || CAKE_LIKE.includes(product.category);
   const writable = !product || [...CAKE_LIKE, 'galletas'].includes(product.category);
   const size = product?.sizes.find((s) => s.id === line.size_id);
@@ -803,31 +729,20 @@ function LineEditor({
         <Input value={line.notes ?? ''} onChange={(e) => onChange({ notes: e.target.value || null })} placeholder="Opcional" />
       </Field>
 
-      <div className="flex items-center gap-3 rounded-xl bg-white border border-cream-200 px-3 py-2">
-        {editPrice || !product ? (
-          <div className="flex items-center gap-2 flex-1">
-            <span className="text-sm font-bold text-choco-500 whitespace-nowrap">Precio/ud</span>
-            <NumberInput value={line.unit_price} onChange={(v) => onChange({ unit_price: v ?? 0, manualPrice: true })} suffix="€" className="max-w-36" />
-            {product && line.manualPrice && (
-              <button
-                type="button"
-                className="text-xs font-bold text-berry-600"
-                onClick={() => {
-                  onChange({ manualPrice: false, unit_price: autoPrice(product, line.size_id, line.servings) });
-                  setEditPrice(false);
-                }}
-              >
-                Precio de catálogo
-              </button>
-            )}
-          </div>
-        ) : (
-          <button type="button" className="flex-1 text-left text-sm text-choco-500" onClick={() => setEditPrice(true)}>
-            {num(line.quantity)} × {money(line.unit_price)}
-            {line.extras.length > 0 && ` + extras ${money(line.extras.reduce((s, e) => s + e.price, 0))}`} · <span className="font-bold text-berry-600">cambiar precio</span>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white border border-cream-200 px-3 py-2.5">
+        <span className="font-bold text-choco-700">Precio</span>
+        <NumberInput
+          value={line.price}
+          onChange={(v) => onChange({ price: v ?? 0, manualPrice: true })}
+          suffix="€"
+          className="max-w-40"
+          aria-label="Precio"
+        />
+        {product && line.manualPrice && line.price !== catalogPrice(product, line) && (
+          <button type="button" className="text-sm font-bold text-berry-600" onClick={() => onChange({ manualPrice: false })}>
+            Poner precio de catálogo ({money(catalogPrice(product, line))})
           </button>
         )}
-        <span className="font-extrabold text-lg tabular-nums">{money(lineTotal(line))}</span>
       </div>
     </div>
   );
@@ -899,6 +814,7 @@ function ProductPickerSheet({
                 notes: null,
                 extras: [],
                 unit_price: 0,
+                price: 0,
               })
             }
             className={cx('rounded-2xl border-2 border-dashed border-cream-300 p-3 flex flex-col items-center justify-center gap-1 text-choco-500 font-bold min-h-36')}

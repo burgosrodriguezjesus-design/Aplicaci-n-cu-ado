@@ -29,6 +29,8 @@ export const lineSchema = z.object({
     .array(z.object({ name: z.string().trim().min(1), price: z.number().min(0) }))
     .default([]),
   unit_price: z.number().min(0).nullable().optional(),
+  /** Precio total de la línea si se escribe a mano (lo que cuesta ese producto). */
+  line_total: z.number().min(0).nullable().optional(),
 });
 export type LineInput = z.infer<typeof lineSchema>;
 
@@ -70,9 +72,11 @@ export function normalizeLines(items: LineInput[], cat: Catalog) {
     const size = product?.sizes.find((s) => s.id === it.size_id) ?? null;
     const name = it.product_name || product?.name;
     if (!name) throw badRequest('Cada producto necesita un nombre');
-    const unitPrice =
-      it.unit_price ?? (product ? suggestedUnitPrice(product, size?.id ?? null, it.servings ?? null) : 0);
     const extrasTotal = it.extras.reduce((s, e) => s + e.price, 0);
+    const unitPrice =
+      it.line_total != null
+        ? (it.line_total - extrasTotal) / it.quantity
+        : it.unit_price ?? (product ? suggestedUnitPrice(product, size?.id ?? null, it.servings ?? null) : 0);
     return {
       id: it.id,
       product_id: product?.id ?? null,
@@ -89,7 +93,7 @@ export function normalizeLines(items: LineInput[], cat: Catalog) {
       notes: it.notes ?? null,
       extras: JSON.stringify(it.extras),
       unit_price: round2(unitPrice),
-      line_total: round2(unitPrice * it.quantity + extrasTotal),
+      line_total: it.line_total != null ? round2(it.line_total) : round2(unitPrice * it.quantity + extrasTotal),
       sort: i,
     };
   });
