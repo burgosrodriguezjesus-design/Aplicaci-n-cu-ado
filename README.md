@@ -94,8 +94,7 @@ npm start
 
 Abre `http://localhost:3000`. Sin `DATABASE_URL` usa una base de datos Postgres local
 integrada (PGlite) en la carpeta `data/`, sin instalar nada más. Con `DATABASE_URL` usa
-el Postgres que le indiques. La primera vez te pedirá el nombre de tu pastelería (puedes
-cargar **datos de ejemplo** para probarla).
+el Postgres que le indiques. La primera vez te pedirá el nombre de tu pastelería.
 
 ### Con Docker
 
@@ -124,7 +123,7 @@ npm run build:vercel  # salida para Vercel (.vercel/output)
 - **Servidor**: Node.js + Express + PostgreSQL (`pg`; PGlite en local y en las pruebas), validación con `zod`, llave de acceso de cada pastelería en una cookie `httpOnly` y un esquema de Postgres por pastelería.
 - **Web**: React + TypeScript + Vite + Tailwind CSS + TanStack Query. Es una PWA.
 - **Estructura**:
-  - `server/db` — conexión, esquema PostgreSQL, migraciones automáticas y datos de ejemplo
+  - `server/db` — conexión, esquema PostgreSQL, migraciones automáticas y datos iniciales (los de ejemplo solo se usan en las pruebas)
   - `server/services` — reglas de negocio (pedidos, costes, producción, compras, finanzas…)
   - `server/routes` — API REST (`/api/...`)
   - `shared/constants.ts` — estados, unidades, alérgenos y configuración comunes

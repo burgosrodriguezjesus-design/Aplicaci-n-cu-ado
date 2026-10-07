@@ -273,7 +273,7 @@ function ResetSection() {
     <Section title="Empezar de cero">
       <Card className="p-4 space-y-3 border-red-200">
         <p className="text-sm text-choco-700">
-          Borra todos los pedidos, clientes, recetas, inventario y demás datos (por ejemplo, para quitar los datos de ejemplo) y deja tu pastelería
+          Borra todos los pedidos, clientes, recetas, inventario y demás datos y deja tu pastelería
           vacía. Antes se guarda una copia de seguridad que podrás restaurar después.
         </p>
         <Button variant="danger" onClick={() => setOpen(true)}>

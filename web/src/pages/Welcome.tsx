@@ -2,13 +2,13 @@ import { useState, type FormEvent } from 'react';
 import { Link2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Button, Field, Input, Toggle } from '../components/ui';
+import { Button, Field, Input } from '../components/ui';
 
 /** Primera vez en este dispositivo: crear su pastelería o abrir una que ya tiene. */
 export function Welcome() {
   const { refresh, linkError } = useAuth();
   const [mode, setMode] = useState<'create' | 'link'>(linkError ? 'link' : 'create');
-  const [f, setF] = useState({ business_name: '', name: '', demo: true });
+  const [f, setF] = useState({ business_name: '', name: '' });
   const [key, setKey] = useState('');
   const [error, setError] = useState(linkError);
   const [loading, setLoading] = useState(false);
@@ -53,17 +53,10 @@ export function Welcome() {
               <Field label="Tu nombre" hint="Opcional.">
                 <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Ej. Ana" />
               </Field>
-              <Toggle
-                checked={f.demo}
-                onChange={(demo) => setF({ ...f, demo })}
-                label="Cargar datos de ejemplo"
-                hint="Pedidos, recetas e inventario de prueba para ver cómo funciona. Puedes borrarlos después."
-              />
               {error && <p className="text-red-600 font-semibold text-sm">{error}</p>}
               <Button type="submit" block size="lg" loading={loading} disabled={!f.business_name.trim()}>
                 Crear mi pastelería
               </Button>
-              {loading && f.demo && <p className="text-center text-sm text-choco-500">Preparando los datos de ejemplo… puede tardar unos segundos.</p>}
             </form>
           ) : (
             <form onSubmit={enter} className="space-y-4">
