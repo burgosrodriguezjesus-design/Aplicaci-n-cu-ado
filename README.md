@@ -71,7 +71,6 @@ Variables de entorno en Vercel:
 | Variable | Para qué |
 |---|---|
 | `DATABASE_URL` | Conexión a Postgres (pooler de Supabase en modo transacción, puerto 6543) |
-| `SETUP_CODE` | Código que pide la pantalla de instalación inicial (para que nadie más pueda crear el administrador) |
 | `CRON_SECRET` | Protege la tarea diaria |
 
 > Supabase (plan gratuito) pausa los proyectos que pasan una semana sin ningún uso. Con el uso diario

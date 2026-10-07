@@ -7,7 +7,6 @@ import type { Permissions, User } from './types';
 interface AuthState {
   loading: boolean;
   needsSetup: boolean;
-  setupCodeRequired: boolean;
   businessName: string;
   user: User | null;
   permissions: Permissions;
@@ -25,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Omit<AuthState, 'refresh' | 'logout'>>({
     loading: true,
     needsSetup: false,
-    setupCodeRequired: false,
     businessName: '',
     user: null,
     permissions: NO_PERMS,
@@ -34,12 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const status = await api<{ needs_setup: boolean; setup_code_required: boolean; user: User | null; business_name: string }>('/auth/status');
+      const status = await api<{ needs_setup: boolean; user: User | null; business_name: string }>('/auth/status');
       if (!status.user) {
         setState({
           loading: false,
           needsSetup: status.needs_setup,
-          setupCodeRequired: status.setup_code_required,
           businessName: status.business_name,
           user: null,
           permissions: NO_PERMS,
@@ -51,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({
         loading: false,
         needsSetup: false,
-        setupCodeRequired: false,
         businessName: me.settings.business_name ?? status.business_name,
         user: me.user,
         permissions: me.permissions,

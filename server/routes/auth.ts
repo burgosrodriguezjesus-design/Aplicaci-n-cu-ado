@@ -50,7 +50,6 @@ authRouter.get(
   '/status',
   h(async (req) => ({
     needs_setup: (await usersCount()) === 0,
-    setup_code_required: !!process.env.SETUP_CODE,
     user: req.user ?? null,
     business_name: getSettings().business_name,
   })),
@@ -62,7 +61,6 @@ const setupSchema = z.object({
   username: z.string().trim().min(3, 'El usuario debe tener al menos 3 letras').max(50),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   demo: z.boolean().default(false),
-  setup_code: z.string().optional(),
 });
 
 authRouter.post(
@@ -70,10 +68,6 @@ authRouter.post(
   h(async (req, res) => {
     if ((await usersCount()) > 0) throw badRequest('La aplicación ya está configurada');
     const input = setupSchema.parse(req.body);
-    // En internet, solo quien tenga el código de instalación puede crear el administrador.
-    if (process.env.SETUP_CODE && input.setup_code?.trim() !== process.env.SETUP_CODE) {
-      throw new HttpError(403, 'El código de instalación no es correcto');
-    }
     const userId = await tx(async () => {
       if ((await usersCount()) > 0) throw badRequest('La aplicación ya está configurada');
       const id = await createUser({ name: input.name, username: input.username, password: input.password, role: 'admin' });

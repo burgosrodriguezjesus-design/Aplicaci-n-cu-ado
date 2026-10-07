@@ -56,8 +56,8 @@ export function Login() {
 }
 
 export function Setup() {
-  const { refresh, setupCodeRequired } = useAuth();
-  const [f, setF] = useState({ business_name: '', name: '', username: '', password: '', demo: true, setup_code: '' });
+  const { refresh } = useAuth();
+  const [f, setF] = useState({ business_name: '', name: '', username: '', password: '', demo: true });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const submit = async (e: FormEvent) => {
@@ -76,13 +76,8 @@ export function Setup() {
   return (
     <Shell title="¡Vamos a empezar!" subtitle="Configura tu pastelería en un minuto">
       <form onSubmit={submit} className="space-y-4">
-        {setupCodeRequired && (
-          <Field label="Código de instalación" hint="Te lo ha dado quien ha instalado la aplicación.">
-            <Input value={f.setup_code} onChange={(e) => setF({ ...f, setup_code: e.target.value })} autoCapitalize="none" autoComplete="off" />
-          </Field>
-        )}
         <Field label="Nombre del negocio">
-          <Input value={f.business_name} onChange={(e) => setF({ ...f, business_name: e.target.value })} placeholder="Ej. Dulces de Ana" autoFocus={!setupCodeRequired} />
+          <Input value={f.business_name} onChange={(e) => setF({ ...f, business_name: e.target.value })} placeholder="Ej. Dulces de Ana" autoFocus />
         </Field>
         <Field label="Tu nombre">
           <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Ej. Ana" />
