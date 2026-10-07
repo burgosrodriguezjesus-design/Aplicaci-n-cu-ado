@@ -1,0 +1,11 @@
+services:
+  obrador:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=Europe/Madrid
+    volumes:
+      # Aquí se guardan la base de datos, las fotos y las copias de seguridad.
+      - ./data:/data
