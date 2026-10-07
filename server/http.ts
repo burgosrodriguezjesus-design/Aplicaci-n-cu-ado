@@ -102,6 +102,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(400).json({ error: 'No se puede guardar: hay datos relacionados o duplicados' });
     return;
   }
+  // Sin conexión con la base de datos (red, pooler, credenciales…)
+  if (/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|tenant\/user|Connection terminated|timeout exceeded when trying to connect/i.test(`${e?.code} ${e?.message}`)) {
+    console.error(err);
+    res.status(503).json({ error: 'No se puede conectar con la base de datos. Prueba otra vez en un momento.' });
+    return;
+  }
   if (e?.status && e.status < 500) {
     res.status(e.status).json({ error: e.message || 'Petición no válida' });
     return;

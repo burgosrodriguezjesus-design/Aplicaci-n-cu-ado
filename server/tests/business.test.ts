@@ -301,6 +301,19 @@ describe('panel, recordatorios y buscador (datos de ejemplo)', () => {
   });
 });
 
+describe('empezar de cero', () => {
+  it('borra todo, vuelve a la instalación y deja una copia restaurable', async () => {
+    const { app, admin } = await freshApp({ demo: true });
+    await admin.post('/api/reset').send({ confirm: 'NO' }).expect(400);
+    await admin.post('/api/reset').send({ confirm: 'BORRAR' }).expect(200);
+    const request = (await import('supertest')).default;
+    const status = (await request(app).get('/api/auth/status').expect(200)).body;
+    expect(status.needs_setup).toBe(true);
+    expect((await all('SELECT kind FROM backups')).map((b) => b.kind)).toEqual(['antes-de-borrar']);
+    expect((await all('SELECT COUNT(*) AS n FROM orders'))[0].n).toBe(0);
+  });
+});
+
 describe('copias de seguridad', () => {
   it('crea, lista y restaura una copia', async () => {
     const { admin } = await freshApp();

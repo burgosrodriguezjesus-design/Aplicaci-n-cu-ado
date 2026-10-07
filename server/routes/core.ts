@@ -8,7 +8,7 @@ import { getSettings, saveSettings } from '../services/settings.js';
 import { createUser, deleteUser, listUsers, tokenHash, updateUser } from '../services/auth.js';
 import { getDashboard, getReminders, search } from '../services/dashboard.js';
 import { runAutomations } from '../services/orders.js';
-import { backupData, createBackup, exportData, listBackups, restoreData } from '../services/backup.js';
+import { backupData, createBackup, exportData, listBackups, resetAll, restoreData } from '../services/backup.js';
 import { DEFAULT_SETTINGS, type Settings } from '../../shared/constants.js';
 
 export const coreRouter = Router();
@@ -266,6 +266,16 @@ coreRouter.post(
   h(async (req) => {
     const b = await backupData(toId(req.params.id));
     await restoreData(b.data, await currentSession(req));
+  }),
+);
+
+/** Borrar todo y volver a la instalación inicial. */
+coreRouter.post(
+  '/reset',
+  requireAdmin,
+  h(async (req) => {
+    const input = z.object({ confirm: z.literal('BORRAR', { message: 'Escribe BORRAR para confirmar' }), keep_backups: z.boolean().default(true) }).parse(req.body);
+    await resetAll({ keepBackups: input.keep_backups });
   }),
 );
 

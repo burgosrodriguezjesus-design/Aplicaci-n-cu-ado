@@ -16,6 +16,7 @@ export function SettingsPage() {
       {admin && <BusinessSettings />}
       {admin && <UsersSection />}
       {admin && <BackupSection />}
+      {admin && <ResetSection />}
       <Section title="Mi cuenta">
         <Card className="p-4 space-y-3">
           <div>
@@ -209,7 +210,7 @@ function UserSheet({ user, onClose }: { user?: User & { active: number }; onClos
 interface BackupRow {
   id: number;
   name: string;
-  kind: 'auto' | 'manual' | 'antes-de-restaurar';
+  kind: 'auto' | 'manual' | 'antes-de-restaurar' | 'antes-de-borrar';
   size: number;
   created_at: string;
 }
@@ -249,7 +250,8 @@ function BackupSection() {
   const label = (b: BackupRow) => {
     const d = new Date(b.created_at);
     const when = d.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const kind = b.kind === 'auto' ? 'automática' : b.kind === 'antes-de-restaurar' ? 'antes de restaurar' : 'manual';
+    const kind =
+      b.kind === 'auto' ? 'automática' : b.kind === 'antes-de-restaurar' ? 'antes de restaurar' : b.kind === 'antes-de-borrar' ? 'antes de borrar todo' : 'manual';
     return `${when} · ${kind}`;
   };
   return (
@@ -300,6 +302,45 @@ function BackupSection() {
           </div>
         )}
       </Card>
+    </Section>
+  );
+}
+
+function ResetSection() {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const reset = useAction(() => api('/reset', { method: 'POST', body: { confirm: text.trim().toUpperCase(), keep_backups: true } }), {
+    success: 'Datos borrados',
+    onSuccess: () => setTimeout(() => window.location.reload(), 600),
+  });
+  return (
+    <Section title="Empezar de cero">
+      <Card className="p-4 space-y-3 border-red-200">
+        <p className="text-sm text-choco-700">
+          Borra todos los pedidos, clientes, recetas, inventario, usuarios y demás datos (por ejemplo, para quitar los datos de ejemplo) y vuelve a la
+          pantalla de instalación. Antes se guarda una copia de seguridad que podrás restaurar después.
+        </p>
+        <Button variant="danger" onClick={() => setOpen(true)}>
+          Borrar todos los datos
+        </Button>
+      </Card>
+      {open && (
+        <Sheet
+          open
+          onClose={() => setOpen(false)}
+          title="¿Borrar todos los datos?"
+          footer={
+            <Button block size="lg" variant="danger" disabled={text.trim().toUpperCase() !== 'BORRAR'} loading={reset.isPending} onClick={() => reset.mutate()}>
+              Borrar todo
+            </Button>
+          }
+        >
+          <div className="space-y-3">
+            <p>Se borrará todo y tendrás que volver a crear tu usuario. Escribe <b>BORRAR</b> para confirmar.</p>
+            <Input value={text} onChange={(e) => setText(e.target.value)} autoCapitalize="characters" autoFocus />
+          </div>
+        </Sheet>
+      )}
     </Section>
   );
 }

@@ -9,7 +9,7 @@ import { nowIso, nowLocal, today } from '../lib/clock.js';
 import { badRequest, notFound } from '../lib/util.js';
 
 const KEEP = { auto: 30, other: 20 };
-type Kind = 'auto' | 'manual' | 'antes-de-restaurar';
+type Kind = 'auto' | 'manual' | 'antes-de-restaurar' | 'antes-de-borrar';
 
 export async function exportData(): Promise<Buffer> {
   const tables: Record<string, unknown[]> = {};
@@ -116,4 +116,14 @@ export async function restoreData(buffer: Buffer, keepSession?: { tokenHash: str
       ]);
     }
   });
+}
+
+/**
+ * Borra todos los datos para empezar de cero (por ejemplo, quitar los datos de ejemplo).
+ * Por defecto guarda antes una copia, que se puede restaurar después de volver a instalar.
+ */
+export async function resetAll(opts: { keepBackups: boolean }) {
+  if (opts.keepBackups) await createBackup('antes-de-borrar');
+  const tables = [...DATA_TABLES, 'sessions', 'images', ...(opts.keepBackups ? [] : ['backups'])];
+  await run(`TRUNCATE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
 }
