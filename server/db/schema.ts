@@ -351,6 +351,10 @@ export const MIGRATIONS: string[] = [
     created_at text NOT NULL DEFAULT ${NOW}
   );
   `,
+  /* 2: funciones de búsqueda con search_path fijo (recomendación de seguridad de Supabase) */ `
+  ALTER FUNCTION norm(text) SET search_path = pg_catalog;
+  ALTER FUNCTION digits(text) SET search_path = pg_catalog;
+  `,
 ];
 
 /** Tablas con datos del negocio, en orden de dependencias (para copias y restauración). */
