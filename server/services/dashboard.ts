@@ -26,12 +26,12 @@ function pluralize(name: string) {
 
 export function stockWarning(i: { name: string; quantity: number; unit: string }) {
   const name = i.name.toLowerCase();
-  if (i.quantity <= 0) return `⚠️ Se ha acabado: ${name}.`;
+  if (i.quantity <= 0) return `Se ha acabado: ${name}.`;
   if (i.unit === 'ud') {
     const n = i.quantity.toLocaleString('es-ES', { maximumFractionDigits: 1 });
-    return i.quantity === 1 ? `⚠️ Solo queda 1 ${name}.` : `⚠️ Solo quedan ${n} ${pluralize(name)}.`;
+    return i.quantity === 1 ? `Solo queda 1 ${name}.` : `Solo quedan ${n} ${pluralize(name)}.`;
   }
-  return `⚠️ Solo quedan ${fmtQty(i.quantity, i.unit)} de ${name}.`;
+  return `Solo quedan ${fmtQty(i.quantity, i.unit)} de ${name}.`;
 }
 
 export async function getDashboard(opts: { finances: boolean }) {
@@ -269,7 +269,7 @@ export async function getReminders(): Promise<Reminder[]> {
           id: `birthday-${c.id}`,
           type: 'birthday',
           severity: 'info',
-          text: `🎂 Cumpleaños de ${c.name} ${dayWord(day)}. ¡Buen momento para escribirle!`,
+          text: `Cumpleaños de ${c.name} ${dayWord(day)}. ¡Buen momento para escribirle!`,
           link: `/clientes/${c.id}`,
           date: day,
         });

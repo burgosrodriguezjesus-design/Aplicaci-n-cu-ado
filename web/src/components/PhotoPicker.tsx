@@ -61,7 +61,7 @@ export function PhotoPicker({
           onClick={() => input.current?.click()}
           disabled={busy > 0}
           className={cx(
-            'h-24 w-24 rounded-xl border-2 border-dashed border-cream-300 bg-white flex flex-col items-center justify-center gap-1 text-choco-500 text-xs font-bold hover:border-berry-200 hover:text-berry-600 transition',
+            'h-24 w-24 rounded-xl border-2 border-dashed border-cream-300 bg-white flex flex-col items-center justify-center gap-1 text-choco-500 text-xs font-medium hover:border-berry-200 hover:text-berry-600 transition',
           )}
         >
           {busy > 0 ? <LoaderCircle className="animate-spin" /> : <Camera size={26} />}

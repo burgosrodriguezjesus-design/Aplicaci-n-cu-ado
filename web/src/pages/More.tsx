@@ -10,14 +10,17 @@ export function More() {
   return (
     <div className="space-y-5">
       <PageHeader title="Más" subtitle={businessName} />
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="card divide-y divide-cream-200 overflow-hidden">
         {items.map((m) => (
-          <Link key={m.to} to={m.to} className="card p-4 flex flex-col gap-2 active:scale-[0.98] transition hover:border-berry-200">
-            <span className="text-4xl">{m.emoji}</span>
-            <span className="font-extrabold text-lg flex items-center justify-between">
-              {m.label}
-              <ChevronRight size={18} className="text-choco-300" />
+          <Link key={m.to} to={m.to} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-cream-50 transition">
+            <span className="h-9 w-9 shrink-0 rounded-lg border border-cream-200 bg-cream-50 flex items-center justify-center text-choco-700">
+              <m.icon size={18} strokeWidth={1.75} />
             </span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-medium text-choco-900">{m.label}</span>
+              <span className="block text-[13px] text-choco-500 truncate">{m.hint}</span>
+            </span>
+            <ChevronRight size={16} className="text-choco-400" />
           </Link>
         ))}
       </div>

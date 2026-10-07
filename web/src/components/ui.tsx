@@ -13,8 +13,8 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router';
-import { ChevronDown, ChevronLeft, LoaderCircle, Minus, Plus, Search, X } from 'lucide-react';
-import { CATEGORY_EMOJI, STATUS_LABELS, STATUS_SHORT, type OrderStatus, type ProductCategory } from '@shared/constants';
+import { CakeSlice, ChevronDown, ChevronLeft, CircleAlert, Cookie, Flame, Gift, Layers, LoaderCircle, Minus, Package, Paintbrush, Plus, Search, Truck, Utensils, X, type LucideIcon } from 'lucide-react';
+import { STATUS_LABELS, STATUS_SHORT, type OrderStatus, type ProductCategory, type Stage } from '@shared/constants';
 import { imageUrl } from '../lib/image';
 import { num, parseNum } from '../lib/format';
 
@@ -28,12 +28,12 @@ export function cx(...c: (string | number | false | null | undefined)[]) {
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
 const variants: Record<Variant, string> = {
-  primary: 'bg-berry-500 text-white hover:bg-berry-600 active:bg-berry-700 shadow-sm',
-  secondary: 'bg-cream-200 text-choco-800 hover:bg-cream-300',
-  outline: 'bg-white text-choco-800 border border-cream-300 hover:bg-cream-50',
-  ghost: 'bg-transparent text-choco-700 hover:bg-cream-200',
-  danger: 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200',
-  success: 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm',
+  primary: 'bg-choco-900 text-white hover:bg-choco-800 active:bg-choco-700 shadow-[0_1px_2px_rgb(28_25_23/0.2)]',
+  secondary: 'bg-white text-choco-800 border border-cream-300 hover:bg-cream-50 shadow-[0_1px_2px_rgb(28_25_23/0.04)]',
+  outline: 'bg-white text-choco-800 border border-cream-300 hover:bg-cream-50 shadow-[0_1px_2px_rgb(28_25_23/0.04)]',
+  ghost: 'bg-transparent text-choco-700 hover:bg-cream-200/70',
+  danger: 'bg-white text-red-700 hover:bg-red-50 border border-red-200',
+  success: 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-[0_1px_2px_rgb(28_25_23/0.2)]',
 };
 
 export function Button({
@@ -52,21 +52,21 @@ export function Button({
   icon?: ReactNode;
   block?: boolean;
 }) {
-  const sizes = { sm: 'h-9 px-3 text-sm gap-1.5', md: 'h-12 px-4 text-[15px] gap-2', lg: 'h-14 px-5 text-lg gap-2.5' };
+  const sizes = { sm: 'h-8 px-3 text-[13px] gap-1.5', md: 'h-10 px-4 text-sm gap-2', lg: 'h-12 px-5 text-[15px] gap-2' };
   return (
     <button
       type="button"
       {...rest}
       disabled={rest.disabled || loading}
       className={cx(
-        'inline-flex items-center justify-center rounded-xl font-bold transition select-none disabled:opacity-50 disabled:pointer-events-none',
+        'inline-flex items-center justify-center rounded-lg font-medium transition select-none disabled:opacity-40 disabled:pointer-events-none',
         variants[variant],
         sizes[size],
         block && 'w-full',
         className,
       )}
     >
-      {loading ? <LoaderCircle className="animate-spin" size={20} /> : icon}
+      {loading ? <LoaderCircle className="animate-spin" size={16} /> : icon}
       {children}
     </button>
   );
@@ -85,7 +85,7 @@ export function IconButton({
       title={label}
       {...rest}
       className={cx(
-        'inline-flex h-11 w-11 items-center justify-center rounded-full text-choco-700 hover:bg-cream-200 active:bg-cream-300 transition disabled:opacity-40',
+        'inline-flex h-10 w-10 items-center justify-center rounded-lg text-choco-700 hover:bg-cream-200/70 active:bg-cream-200 transition disabled:opacity-40',
         className,
       )}
     >
@@ -100,7 +100,7 @@ export function IconButton({
 
 export function Card({ className, children, onClick }: { className?: string; children: ReactNode; onClick?: () => void }) {
   return (
-    <div className={cx('card', onClick && 'cursor-pointer active:scale-[0.99] transition', className)} onClick={onClick}>
+    <div className={cx('card', onClick && 'cursor-pointer hover:border-cream-300 transition', className)} onClick={onClick}>
       {children}
     </div>
   );
@@ -118,9 +118,9 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cx('space-y-2.5', className)}>
+    <section className={cx('space-y-3', className)}>
       {(title || action) && (
-        <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex items-center justify-between gap-2">
           {title && <h2 className="section-title">{title}</h2>}
           {action}
         </div>
@@ -143,18 +143,18 @@ export function PageHeader({
 }) {
   const nav = useNavigate();
   return (
-    <div className="flex items-center gap-2 mb-4">
+    <div className="flex items-center gap-2 mb-5">
       {back && (
         <IconButton
           label="Volver"
           className="-ml-2 shrink-0"
           onClick={() => (typeof back === 'string' ? nav(back) : window.history.length > 1 ? nav(-1) : nav('/'))}
         >
-          <ChevronLeft size={26} />
+          <ChevronLeft size={22} />
         </IconButton>
       )}
       <div className="min-w-0 flex-1">
-        <h1 className="text-2xl font-extrabold text-choco-900 leading-tight truncate">{title}</h1>
+        <h1 className="text-[22px] font-semibold text-choco-900 leading-tight truncate">{title}</h1>
         {subtitle && <div className="text-sm text-choco-500 mt-0.5">{subtitle}</div>}
       </div>
       {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
@@ -162,12 +162,16 @@ export function PageHeader({
   );
 }
 
-export function Empty({ icon, title, text, action }: { icon?: ReactNode; title: string; text?: string; action?: ReactNode }) {
+export function Empty({ icon: Icon, title, text, action }: { icon?: LucideIcon; title: string; text?: string; action?: ReactNode }) {
   return (
-    <div className="card flex flex-col items-center text-center px-6 py-10 gap-2">
-      {icon && <div className="text-5xl mb-1">{icon}</div>}
-      <div className="font-extrabold text-lg text-choco-800">{title}</div>
-      {text && <p className="text-choco-500 max-w-sm">{text}</p>}
+    <div className="card flex flex-col items-center text-center px-6 py-10 gap-1.5">
+      {Icon && (
+        <div className="mb-2 h-10 w-10 rounded-lg border border-cream-200 bg-cream-50 flex items-center justify-center text-choco-500">
+          <Icon size={20} strokeWidth={1.75} />
+        </div>
+      )}
+      <div className="font-semibold text-choco-900">{title}</div>
+      {text && <p className="text-sm text-choco-500 max-w-sm">{text}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
   );
@@ -176,7 +180,7 @@ export function Empty({ icon, title, text, action }: { icon?: ReactNode; title: 
 export function Loading({ text = 'Cargando…' }: { text?: string }) {
   return (
     <div className="flex items-center justify-center gap-2 py-16 text-choco-500">
-      <LoaderCircle className="animate-spin" size={22} /> {text}
+      <LoaderCircle className="animate-spin" size={18} /> <span className="text-sm">{text}</span>
     </div>
   );
 }
@@ -184,8 +188,8 @@ export function Loading({ text = 'Cargando…' }: { text?: string }) {
 export function ErrorBox({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
     <div className="card p-5 text-center space-y-3">
-      <div className="text-3xl">😕</div>
-      <p className="font-semibold">{(error as Error)?.message || 'No se ha podido cargar'}</p>
+      <CircleAlert className="mx-auto text-choco-400" size={24} strokeWidth={1.75} />
+      <p className="font-medium">{(error as Error)?.message || 'No se ha podido cargar'}</p>
       {retry && (
         <Button variant="secondary" onClick={retry}>
           Reintentar
@@ -210,9 +214,9 @@ export function Collapsible({
   return (
     <div className="card overflow-hidden">
       <button type="button" className="w-full flex items-center gap-2 px-4 py-3.5 text-left" onClick={() => setOpen(!open)}>
-        <span className="flex-1 font-bold">{title}</span>
+        <span className="flex-1 font-medium">{title}</span>
         {right}
-        <ChevronDown size={20} className={cx('transition text-choco-500', open && 'rotate-180')} />
+        <ChevronDown size={18} className={cx('transition text-choco-500', open && 'rotate-180')} />
       </button>
       {open && <div className="px-4 pb-4 anim-fade">{children}</div>}
     </div>
@@ -222,8 +226,8 @@ export function Collapsible({
 export function ProgressBar({ value, total, className }: { value: number; total: number; className?: string }) {
   const pct = total ? Math.round((value / total) * 100) : 0;
   return (
-    <div className={cx('h-2.5 rounded-full bg-cream-200 overflow-hidden', className)} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-      <div className={cx('h-full rounded-full transition-all', pct === 100 ? 'bg-emerald-500' : 'bg-berry-500')} style={{ width: `${pct}%` }} />
+    <div className={cx('h-1.5 rounded-full bg-cream-200 overflow-hidden', className)} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+      <div className={cx('h-full rounded-full transition-all', pct === 100 ? 'bg-emerald-600' : 'bg-choco-900')} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -233,25 +237,25 @@ export function ProgressBar({ value, total, className }: { value: number; total:
 // ---------------------------------------------------------------------------
 
 export const STATUS_STYLE: Record<OrderStatus, { badge: string; dot: string; bar: string }> = {
-  nuevo: { badge: 'bg-sky-100 text-sky-800 ring-sky-200', dot: 'bg-sky-500', bar: 'border-l-sky-500' },
-  confirmado: { badge: 'bg-violet-100 text-violet-800 ring-violet-200', dot: 'bg-violet-500', bar: 'border-l-violet-500' },
-  pendiente: { badge: 'bg-amber-100 text-amber-900 ring-amber-200', dot: 'bg-amber-500', bar: 'border-l-amber-500' },
-  en_preparacion: { badge: 'bg-orange-100 text-orange-800 ring-orange-200', dot: 'bg-orange-500', bar: 'border-l-orange-500' },
-  terminado: { badge: 'bg-teal-100 text-teal-800 ring-teal-200', dot: 'bg-teal-500', bar: 'border-l-teal-500' },
-  entregado: { badge: 'bg-emerald-100 text-emerald-800 ring-emerald-200', dot: 'bg-emerald-500', bar: 'border-l-emerald-500' },
-  cancelado: { badge: 'bg-stone-100 text-stone-500 ring-stone-200 line-through', dot: 'bg-stone-400', bar: 'border-l-stone-300' },
+  nuevo: { badge: 'bg-sky-50 text-sky-800 ring-sky-600/20', dot: 'bg-sky-500', bar: 'border-l-sky-500' },
+  confirmado: { badge: 'bg-indigo-50 text-indigo-800 ring-indigo-600/20', dot: 'bg-indigo-500', bar: 'border-l-indigo-500' },
+  pendiente: { badge: 'bg-amber-50 text-amber-800 ring-amber-600/25', dot: 'bg-amber-500', bar: 'border-l-amber-500' },
+  en_preparacion: { badge: 'bg-orange-50 text-orange-800 ring-orange-600/20', dot: 'bg-orange-500', bar: 'border-l-orange-500' },
+  terminado: { badge: 'bg-teal-50 text-teal-800 ring-teal-600/20', dot: 'bg-teal-500', bar: 'border-l-teal-500' },
+  entregado: { badge: 'bg-emerald-50 text-emerald-800 ring-emerald-600/20', dot: 'bg-emerald-500', bar: 'border-l-emerald-500' },
+  cancelado: { badge: 'bg-stone-50 text-stone-500 ring-stone-500/20 line-through', dot: 'bg-stone-400', bar: 'border-l-stone-300' },
 };
 
 export function StatusBadge({ status, long, className }: { status: OrderStatus; long?: boolean; className?: string }) {
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold ring-1 whitespace-nowrap',
+        'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap',
         STATUS_STYLE[status].badge,
         className,
       )}
     >
-      <span className={cx('h-2 w-2 rounded-full', STATUS_STYLE[status].dot)} />
+      <span className={cx('h-1.5 w-1.5 rounded-full', STATUS_STYLE[status].dot)} />
       {long ? STATUS_LABELS[status] : STATUS_SHORT[status]}
     </span>
   );
@@ -259,40 +263,80 @@ export function StatusBadge({ status, long, className }: { status: OrderStatus; 
 
 export function Badge({ children, tone = 'neutral', className }: { children: ReactNode; tone?: 'neutral' | 'red' | 'amber' | 'green' | 'berry' | 'blue'; className?: string }) {
   const tones = {
-    neutral: 'bg-cream-200 text-choco-700',
-    red: 'bg-red-100 text-red-700',
-    amber: 'bg-amber-100 text-amber-800',
-    green: 'bg-emerald-100 text-emerald-800',
-    berry: 'bg-berry-100 text-berry-700',
-    blue: 'bg-sky-100 text-sky-800',
+    neutral: 'bg-cream-100 text-choco-700 ring-choco-500/15',
+    red: 'bg-red-50 text-red-700 ring-red-600/20',
+    amber: 'bg-amber-50 text-amber-800 ring-amber-600/25',
+    green: 'bg-emerald-50 text-emerald-800 ring-emerald-600/20',
+    berry: 'bg-berry-50 text-berry-700 ring-berry-600/20',
+    blue: 'bg-sky-50 text-sky-800 ring-sky-600/20',
   };
-  return <span className={cx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold whitespace-nowrap', tones[tone], className)}>{children}</span>;
+  return (
+    <span className={cx('inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap', tones[tone], className)}>
+      {children}
+    </span>
+  );
 }
 
-/** Foto del producto o, si no hay, un dibujo con el emoji de su categoría. */
+export const STAGE_ICON: Record<Stage, LucideIcon> = {
+  preparar: Utensils,
+  hornear: Flame,
+  rellenar: Layers,
+  decorar: Paintbrush,
+  empaquetar: Package,
+  entregar: Truck,
+};
+
+export const CATEGORY_ICON: Record<ProductCategory, LucideIcon> = {
+  tartas: CakeSlice,
+  tartas_personalizadas: CakeSlice,
+  cupcakes: CakeSlice,
+  galletas: Cookie,
+  brownies: Package,
+  cheesecakes: CakeSlice,
+  packs: Gift,
+  otros: Package,
+};
+
+/** Icono de una fase de producción, en una cajita neutra. */
+export function StageIcon({ stage, className }: { stage: Stage; className?: string }) {
+  const Icon = STAGE_ICON[stage] ?? Package;
+  return (
+    <span className={cx('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-cream-200 bg-cream-50 text-choco-500', className)}>
+      <Icon size={16} strokeWidth={1.75} />
+    </span>
+  );
+}
+
+export function CategoryIcon({ category, className }: { category?: string | null; className?: string }) {
+  const Icon = CATEGORY_ICON[(category as ProductCategory) ?? 'otros'] ?? CakeSlice;
+  return (
+    <span className={cx('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-cream-200 bg-cream-50 text-choco-500', className)}>
+      <Icon size={16} strokeWidth={1.75} />
+    </span>
+  );
+}
+
+/** Foto del producto o, si no hay, un hueco neutro con el icono de su categoría. */
 export function Thumb({
   photoId,
   category,
-  emoji,
+  icon,
   className,
-  rounded = 'rounded-xl',
+  rounded = 'rounded-lg',
 }: {
   photoId?: number | null;
   category?: ProductCategory | string | null;
-  emoji?: string;
+  icon?: LucideIcon;
   className?: string;
   rounded?: string;
 }) {
   if (photoId) {
     return <img src={imageUrl(photoId)} alt="" loading="lazy" className={cx('object-cover bg-cream-200', rounded, className)} />;
   }
-  const e = emoji ?? CATEGORY_EMOJI[(category as ProductCategory) ?? 'otros'] ?? '🧁';
+  const Icon = icon ?? CATEGORY_ICON[(category as ProductCategory) ?? 'otros'] ?? CakeSlice;
   return (
-    <div
-      className={cx('flex items-center justify-center bg-gradient-to-br from-berry-50 via-cream-100 to-caramel-100', rounded, className)}
-      aria-hidden
-    >
-      <span className="text-[2.2em] leading-none drop-shadow-sm">{e}</span>
+    <div className={cx('flex items-center justify-center bg-cream-100 text-choco-400 border border-cream-200', rounded, className)} aria-hidden>
+      <Icon className="h-[40%] w-[40%] max-h-10 max-w-10" strokeWidth={1.5} />
     </div>
   );
 }
@@ -328,7 +372,7 @@ export function Field({
           </span>
         )}
         {children}
-        {hint && <span className="block text-xs text-choco-500 mt-1">{hint}</span>}
+        {hint && <span className="block text-xs text-choco-500 mt-1.5">{hint}</span>}
       </div>
     );
   }
@@ -336,7 +380,7 @@ export function Field({
     <label className={cx('block', className)}>
       {label && <span className="label">{label}</span>}
       {children}
-      {hint && <span className="block text-xs text-choco-500 mt-1">{hint}</span>}
+      {hint && <span className="block text-xs text-choco-500 mt-1.5">{hint}</span>}
     </label>
   );
 }
@@ -372,7 +416,7 @@ export function Select({
           </option>
         ))}
       </select>
-      <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-choco-500" />
+      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-choco-500" />
     </div>
   );
 }
@@ -418,7 +462,7 @@ export function NumberInput({
         }}
         onFocus={(e) => e.target.select()}
       />
-      {suffix && <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-choco-500 font-semibold pointer-events-none">{suffix}</span>}
+      {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-choco-500 text-sm pointer-events-none">{suffix}</span>}
     </div>
   );
 }
@@ -437,12 +481,12 @@ export function Stepper({
   label?: string;
 }) {
   return (
-    <div className="inline-flex items-center rounded-xl border border-cream-300 bg-white" aria-label={label}>
-      <button type="button" className="h-12 w-12 flex items-center justify-center text-berry-600 disabled:opacity-30" disabled={value - step < min} onClick={() => onChange(Math.max(min, +(value - step).toFixed(3)))} aria-label="Menos">
-        <Minus size={20} />
+    <div className="inline-flex items-center rounded-lg border border-cream-300 bg-white shadow-[0_1px_2px_rgb(28_25_23/0.04)]" aria-label={label}>
+      <button type="button" className="h-10 w-10 flex items-center justify-center text-choco-700 hover:bg-cream-50 rounded-l-lg disabled:opacity-30" disabled={value - step < min} onClick={() => onChange(Math.max(min, +(value - step).toFixed(3)))} aria-label="Menos">
+        <Minus size={16} />
       </button>
       <input
-        className="w-14 text-center font-extrabold text-lg bg-transparent outline-none"
+        className="w-12 text-center font-medium tabular-nums bg-transparent outline-none border-x border-cream-200 h-10"
         inputMode="decimal"
         value={num(value)}
         onChange={(e) => {
@@ -451,8 +495,8 @@ export function Stepper({
         }}
         onFocus={(e) => e.target.select()}
       />
-      <button type="button" className="h-12 w-12 flex items-center justify-center text-berry-600" onClick={() => onChange(+(value + step).toFixed(3))} aria-label="Más">
-        <Plus size={20} />
+      <button type="button" className="h-10 w-10 flex items-center justify-center text-choco-700 hover:bg-cream-50 rounded-r-lg" onClick={() => onChange(+(value + step).toFixed(3))} aria-label="Más">
+        <Plus size={16} />
       </button>
     </div>
   );
@@ -471,15 +515,15 @@ export function Chip({
   className?: string;
   tone?: 'berry' | 'red';
 }) {
-  const on = tone === 'red' ? 'bg-red-600 text-white border-red-600' : 'bg-berry-500 text-white border-berry-500';
+  const on = tone === 'red' ? 'bg-red-50 text-red-800 border-red-300' : 'bg-choco-900 text-white border-choco-900';
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-full border px-3.5 h-10 text-sm font-bold whitespace-nowrap transition shrink-0',
-        active ? on : 'bg-white text-choco-700 border-cream-300 hover:border-berry-200',
+        'inline-flex items-center gap-1.5 rounded-lg border px-3 h-9 text-[13px] font-medium whitespace-nowrap transition shrink-0',
+        active ? on : 'bg-white text-choco-700 border-cream-300 hover:bg-cream-50',
         className,
       )}
     >
@@ -526,7 +570,7 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
   return (
     <label htmlFor={id} className="flex items-start gap-3 py-2 cursor-pointer">
       <span className="flex-1">
-        <span className="block font-semibold">{label}</span>
+        <span className="block font-medium text-choco-900">{label}</span>
         {hint && <span className="block text-sm text-choco-500">{hint}</span>}
       </span>
       <button
@@ -535,9 +579,9 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={cx('relative h-8 w-14 rounded-full transition shrink-0', checked ? 'bg-berry-500' : 'bg-cream-300')}
+        className={cx('relative h-6 w-11 rounded-full transition shrink-0 mt-0.5', checked ? 'bg-choco-900' : 'bg-cream-300')}
       >
-        <span className={cx('absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all', checked ? 'left-7' : 'left-1')} />
+        <span className={cx('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', checked ? 'left-[22px]' : 'left-0.5')} />
       </button>
     </label>
   );
@@ -555,7 +599,7 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={cx('flex rounded-xl bg-cream-200 p-1 gap-1', className)} role="tablist">
+    <div className={cx('flex rounded-lg bg-cream-200/70 p-0.5 gap-0.5', className)} role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
@@ -564,8 +608,8 @@ export function Segmented<T extends string>({
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
           className={cx(
-            'flex-1 h-10 rounded-lg text-sm font-bold transition px-2 whitespace-nowrap',
-            value === o.value ? 'bg-white text-berry-600 shadow-sm' : 'text-choco-500',
+            'flex-1 h-8 rounded-md text-[13px] font-medium transition px-2 whitespace-nowrap',
+            value === o.value ? 'bg-white text-choco-900 shadow-[0_1px_2px_rgb(28_25_23/0.1)]' : 'text-choco-500 hover:text-choco-800',
           )}
         >
           {o.label}
@@ -578,10 +622,10 @@ export function Segmented<T extends string>({
 export function SearchInput({ value, onChange, placeholder, autoFocus }: { value: string; onChange: (v: string) => void; placeholder?: string; autoFocus?: boolean }) {
   return (
     <div className="relative">
-      <Search size={20} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-choco-400 pointer-events-none" />
+      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-choco-400 pointer-events-none" />
       <input
         type="search"
-        className="input pl-11"
+        className="input pl-9"
         value={value}
         placeholder={placeholder ?? 'Buscar…'}
         autoFocus={autoFocus}
@@ -624,21 +668,21 @@ export function Sheet({
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-choco-900/40 anim-fade" onClick={onClose} />
+      <div className="absolute inset-0 bg-choco-900/30 backdrop-blur-[2px] anim-fade" onClick={onClose} />
       <div
         className={cx(
-          'relative anim-sheet bg-cream-50 w-full rounded-t-3xl sm:rounded-3xl max-h-[92dvh] flex flex-col shadow-2xl',
+          'relative anim-sheet bg-white w-full rounded-t-2xl sm:rounded-xl max-h-[92dvh] flex flex-col shadow-2xl border border-cream-200',
           wide ? 'sm:max-w-2xl' : 'sm:max-w-lg',
         )}
       >
-        <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-          <div className="flex-1 text-xl font-extrabold text-choco-900">{title}</div>
+        <div className="flex items-center gap-2 px-5 pt-4 pb-3">
+          <div className="flex-1 text-[17px] font-semibold text-choco-900">{title}</div>
           <IconButton label="Cerrar" onClick={onClose} className="-mr-2">
-            <X size={22} />
+            <X size={18} />
           </IconButton>
         </div>
         <div className="overflow-y-auto px-5 pb-5 flex-1">{children}</div>
-        {footer && <div className="border-t border-cream-200 px-5 py-3 pb-safe bg-white sm:rounded-b-3xl">{footer}</div>}
+        {footer && <div className="border-t border-cream-200 px-5 py-3 pb-safe bg-cream-50 sm:rounded-b-xl">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -684,7 +728,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           </div>
         }
       >
-        {state?.text && <div className="text-choco-700">{state.text}</div>}
+        {state?.text && <div className="text-sm text-choco-700">{state.text}</div>}
       </Sheet>
     </ConfirmCtx.Provider>
   );
@@ -696,7 +740,7 @@ export function useConfirm() {
 
 export function LinkRow({ to, children, right }: { to: string; children: ReactNode; right?: ReactNode }) {
   return (
-    <Link to={to} className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream-50 active:bg-cream-100 transition">
+    <Link to={to} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50 active:bg-cream-100 transition">
       <div className="flex-1 min-w-0">{children}</div>
       {right}
     </Link>
@@ -706,16 +750,16 @@ export function LinkRow({ to, children, right }: { to: string; children: ReactNo
 /** Botón flotante (+) en móvil. */
 export function Fab({ to, label, onClick }: { to?: string; label: string; onClick?: () => void }) {
   const cls =
-    'lg:hidden fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 h-16 w-16 rounded-full bg-berry-500 text-white flex items-center justify-center shadow-[var(--shadow-float)] active:scale-95 transition';
+    'lg:hidden fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 h-14 w-14 rounded-xl bg-choco-900 text-white flex items-center justify-center shadow-[var(--shadow-float)] active:scale-95 transition';
   if (to)
     return (
       <Link to={to} className={cls} aria-label={label} title={label}>
-        <Plus size={30} strokeWidth={2.5} />
+        <Plus size={24} strokeWidth={2} />
       </Link>
     );
   return (
     <button type="button" className={cls} aria-label={label} title={label} onClick={onClick}>
-      <Plus size={30} strokeWidth={2.5} />
+      <Plus size={24} strokeWidth={2} />
     </button>
   );
 }

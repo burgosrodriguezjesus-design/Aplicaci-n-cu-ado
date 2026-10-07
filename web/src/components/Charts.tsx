@@ -142,11 +142,11 @@ export function ColumnChart({
             left: Math.min(Math.max(padL + hover * band + band / 2 - 80, 0), width - 170),
           }}
         >
-          <div className="font-bold text-choco-500 mb-1 first-letter:uppercase">{data[hover].long}</div>
+          <div className="font-medium text-choco-500 mb-1 first-letter:uppercase">{data[hover].long}</div>
           {series.map((s, k) => (
             <div key={s.name} className="flex items-center gap-2">
               <span className="h-0.5 w-3 rounded" style={{ background: colorFor ? colorFor(data[hover].values[k], k) : s.color }} />
-              <span className="font-extrabold text-choco-900 tabular-nums">{money(data[hover].values[k])}</span>
+              <span className="font-semibold text-choco-900 tabular-nums">{money(data[hover].values[k])}</span>
               <span className="text-choco-500">{s.name}</span>
             </div>
           ))}
@@ -178,7 +178,7 @@ export function HBars({ rows, color = SERIES.blue, format = money }: { rows: { l
         <div key={r.label}>
           <div className="flex justify-between text-sm mb-1">
             <span className="font-semibold text-choco-700">{r.label}</span>
-            <span className="font-extrabold tabular-nums text-choco-900">{format(r.value)}</span>
+            <span className="font-semibold tabular-nums text-choco-900">{format(r.value)}</span>
           </div>
           <div className="h-3 rounded-r bg-cream-100">
             <div className={cx('h-full rounded-r')} style={{ width: `${Math.max(1.5, (r.value / max) * 100)}%`, background: color }} />

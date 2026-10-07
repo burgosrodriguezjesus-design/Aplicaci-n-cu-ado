@@ -88,7 +88,7 @@ export function Finance() {
         <IconButton label="Mes anterior" onClick={() => setMonth(addMonths(month, -1))}>
           <ChevronLeft size={26} />
         </IconButton>
-        <div className="flex-1 text-center font-extrabold text-xl">{monthLabel(month)}</div>
+        <div className="flex-1 text-center font-semibold text-lg">{monthLabel(month)}</div>
         <IconButton label="Mes siguiente" onClick={() => setMonth(addMonths(month, 1))} disabled={month >= today().slice(0, 7)}>
           <ChevronRight size={26} />
         </IconButton>
@@ -107,8 +107,8 @@ export function Finance() {
       <Card className="p-5">
         <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
-            <div className="font-bold text-choco-500">Beneficio estimado</div>
-            <div className={cx('text-5xl font-extrabold leading-tight', s.profit >= 0 ? 'text-emerald-700' : 'text-red-600')}>{money(s.profit)}</div>
+            <div className="font-medium text-choco-500">Beneficio estimado</div>
+            <div className={cx('text-4xl font-semibold tracking-tight leading-tight tabular-nums', s.profit >= 0 ? 'text-emerald-700' : 'text-red-700')}>{money(s.profit)}</div>
           </div>
           <div className="text-[15px] space-y-1 sm:min-w-64">
             <Line label="Ingresos (facturado)" value={money(s.revenue.total)} />
@@ -148,10 +148,10 @@ export function Finance() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-choco-500">
-                    <th className="py-1.5 font-bold">Mes</th>
-                    <th className="py-1.5 font-bold text-right">Ingresos</th>
-                    <th className="py-1.5 font-bold text-right">Gastos</th>
-                    <th className="py-1.5 font-bold text-right">Beneficio</th>
+                    <th className="py-1.5 font-medium">Mes</th>
+                    <th className="py-1.5 font-medium text-right">Ingresos</th>
+                    <th className="py-1.5 font-medium text-right">Gastos</th>
+                    <th className="py-1.5 font-medium text-right">Beneficio</th>
                   </tr>
                 </thead>
                 <tbody className="tabular-nums">
@@ -160,7 +160,7 @@ export function Finance() {
                       <td className="py-1.5 first-letter:uppercase">{monthLabel(h.month)}</td>
                       <td className="py-1.5 text-right">{money(h.revenue)}</td>
                       <td className="py-1.5 text-right">{money(h.expenses)}</td>
-                      <td className={cx('py-1.5 text-right font-bold', h.profit < 0 && 'text-red-600')}>{money(h.profit)}</td>
+                      <td className={cx('py-1.5 text-right font-medium', h.profit < 0 && 'text-red-600')}>{money(h.profit)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -169,7 +169,7 @@ export function Finance() {
           ) : (
             <>
               <div className="space-y-2">
-                <div className="font-extrabold">Ingresos y gastos</div>
+                <div className="font-semibold">Ingresos y gastos</div>
                 <Legend
                   items={[
                     { name: 'Ingresos', color: SERIES.blue },
@@ -184,12 +184,12 @@ export function Finance() {
                   ]}
                   extra={(d) => {
                     const p = d.values[0] - d.values[1];
-                    return <div className="mt-1 border-t border-cream-200 pt-1 font-bold">Beneficio {money(p)}</div>;
+                    return <div className="mt-1 border-t border-cream-200 pt-1 font-medium">Beneficio {money(p)}</div>;
                   }}
                 />
               </div>
               <div className="space-y-2">
-                <div className="font-extrabold">Beneficio por mes</div>
+                <div className="font-semibold">Beneficio por mes</div>
                 <ColumnChart
                   data={chartData.map((d) => ({ ...d, values: [d.profit] }))}
                   series={[{ name: 'Beneficio', color: SERIES.blue }]}
@@ -228,10 +228,10 @@ export function Finance() {
           <Card className="divide-y divide-cream-200">
             {s.top_products.map((p, i) => (
               <div key={p.name} className="flex items-center gap-3 px-4 py-2.5">
-                <span className="w-6 text-choco-400 font-extrabold">{i + 1}</span>
+                <span className="w-6 text-choco-400 font-semibold">{i + 1}</span>
                 <span className="flex-1 font-semibold">{p.name}</span>
                 <span className="text-sm text-choco-500">{num(p.quantity)} uds</span>
-                <span className="font-extrabold tabular-nums w-24 text-right">{money(p.revenue)}</span>
+                <span className="font-semibold tabular-nums w-24 text-right">{money(p.revenue)}</span>
               </div>
             ))}
           </Card>
@@ -243,7 +243,7 @@ export function Finance() {
           <Card className="divide-y divide-cream-200">
             {moves.data.map((m) => (
               <div key={`${m.source}-${m.id}`} className="flex items-center gap-3 px-4 py-2.5">
-                <span className={cx('h-9 w-9 shrink-0 rounded-full flex items-center justify-center font-extrabold', m.source === 'expense' || m.kind === 'refund' ? 'bg-orange-50 text-orange-700' : 'bg-sky-50 text-sky-700')}>
+                <span className={cx('h-9 w-9 shrink-0 rounded-full flex items-center justify-center font-semibold', m.source === 'expense' || m.kind === 'refund' ? 'bg-orange-50 text-orange-700' : 'bg-sky-50 text-sky-700')}>
                   {m.source === 'expense' || m.kind === 'refund' ? '−' : '+'}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -261,7 +261,7 @@ export function Finance() {
                     {m.supplier ? ` · ${m.supplier}` : ''}
                   </div>
                 </div>
-                <span className="font-extrabold tabular-nums">
+                <span className="font-semibold tabular-nums">
                   {m.source === 'expense' || m.kind === 'refund' ? '−' : ''}
                   {money(m.amount)}
                 </span>
@@ -320,9 +320,9 @@ function Line({ label, value }: { label: React.ReactNode; value: React.ReactNode
 
 function Tile({ label, value, sub, warn }: { label: string; value: string; sub?: string; warn?: boolean }) {
   return (
-    <div className={cx('card p-4 h-full', warn && 'bg-amber-50 border-amber-200')}>
-      <div className="text-sm font-bold text-choco-500">{label}</div>
-      <div className={cx('text-2xl font-extrabold mt-0.5', warn && 'text-amber-700')}>{value}</div>
+    <div className="card p-4 h-full">
+      <div className="text-sm font-medium text-choco-500">{label}</div>
+      <div className={cx('text-2xl font-semibold mt-0.5', warn && 'text-amber-700')}>{value}</div>
       {sub && <div className="text-xs text-choco-500 mt-0.5">{sub}</div>}
     </div>
   );

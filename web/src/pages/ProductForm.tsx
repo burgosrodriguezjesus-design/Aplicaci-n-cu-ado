@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { Plus, Trash2, X } from 'lucide-react';
+import { BookOpen, Package, Plus, Trash2, X } from 'lucide-react';
 import {
-  CATEGORY_EMOJI,
   CATEGORY_LABELS,
   compatibleUnits,
   DEFAULT_STAGES,
   PRODUCT_CATEGORIES,
-  STAGE_EMOJI,
   STAGE_LABELS,
   STAGES,
   UNIT_LABELS,
@@ -193,7 +191,7 @@ export function ProductForm() {
           <div className="flex flex-wrap gap-2">
             {PRODUCT_CATEGORIES.map((c) => (
               <Chip key={c} active={f.category === c} onClick={() => setF({ ...f, category: c })}>
-                {CATEGORY_EMOJI[c]} {CATEGORY_LABELS[c]}
+                {CATEGORY_LABELS[c]}
               </Chip>
             ))}
           </div>
@@ -209,7 +207,7 @@ export function ProductForm() {
       </Card>
 
       <Card className="p-4 space-y-4">
-        <h2 className="font-extrabold text-lg">Precio y tamaños</h2>
+        <h2 className="font-semibold text-base">Precio y tamaños</h2>
         <Segmented
           value={f.pricing}
           onChange={(pricing) => setF({ ...f, pricing })}
@@ -248,7 +246,7 @@ export function ProductForm() {
       </Card>
 
       <Card className="p-4 space-y-4">
-        <h2 className="font-extrabold text-lg">Opciones para el cliente</h2>
+        <h2 className="font-semibold text-base">Opciones para el cliente</h2>
         <TagInput label="Sabores" value={f.flavors} onChange={(flavors) => setF({ ...f, flavors })} />
         <TagInput label="Rellenos" value={f.fillings} onChange={(fillings) => setF({ ...f, fillings })} />
         <TagInput label="Coberturas" value={f.coverings} onChange={(coverings) => setF({ ...f, coverings })} />
@@ -271,7 +269,7 @@ export function ProductForm() {
 
       <Card className="p-4 space-y-4">
         <div>
-          <h2 className="font-extrabold text-lg">Composición (escandallo)</h2>
+          <h2 className="font-semibold text-base">Composición (escandallo)</h2>
           <p className="text-sm text-choco-500">
             Recetas que lleva (se ajustan solas a las raciones) y envases o decoración. Con esto se calculan el coste, los ingredientes de cada pedido y la lista de la compra.
           </p>
@@ -281,7 +279,7 @@ export function ProductForm() {
           return (
             <div key={c.key} className="rounded-xl bg-cream-50 border border-cream-200 p-3 space-y-2">
               <div className="flex gap-2 items-center">
-                <span className="text-xl">{c.type === 'recipe' ? '📖' : '📦'}</span>
+                <span className="text-choco-400">{c.type === 'recipe' ? <BookOpen size={18} /> : <Package size={18} />}</span>
                 {c.type === 'recipe' ? (
                   <Select className="flex-1" value={c.recipe_id ?? ''} placeholder="Elige receta…" options={recipes.data!.map((r) => ({ value: r.id, label: `${r.name} (${r.servings} rac.)` }))} onChange={(v) => setComp(c.key, { recipe_id: v ? Number(v) : null })} />
                 ) : (
@@ -343,12 +341,12 @@ export function ProductForm() {
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h2 className="font-extrabold text-lg">Fases de producción</h2>
+        <h2 className="font-semibold text-base">Fases de producción</h2>
         <p className="text-sm text-choco-500">Tareas que aparecerán en Producción para este producto (además de «Entregar»).</p>
         <div className="flex flex-wrap gap-2">
           {STAGES.filter((s) => s !== 'entregar').map((s) => (
             <Chip key={s} active={stages.includes(s)} onClick={() => setF({ ...f, stages: stages.includes(s) ? stages.filter((x) => x !== s) : STAGES.filter((x) => x === s || stages.includes(x)) })}>
-              {STAGE_EMOJI[s]} {STAGE_LABELS[s]}
+              {STAGE_LABELS[s]}
             </Chip>
           ))}
         </div>
@@ -383,9 +381,9 @@ function TagInput({ label, value, onChange }: { label: string; value: string[]; 
       <span className="label">{label}</span>
       <div className="flex flex-wrap gap-2 mb-2">
         {value.map((v) => (
-          <span key={v} className="inline-flex items-center gap-1 rounded-full bg-berry-50 text-berry-700 border border-berry-100 pl-3 pr-1 h-9 font-bold text-sm">
+          <span key={v} className="inline-flex items-center gap-1 rounded-md bg-cream-50 text-choco-800 border border-cream-200 pl-2.5 pr-1 h-8 font-medium text-[13px]">
             {v}
-            <button type="button" aria-label={`Quitar ${v}`} className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-berry-100" onClick={() => onChange(value.filter((x) => x !== v))}>
+            <button type="button" aria-label={`Quitar ${v}`} className="h-7 w-7 flex items-center justify-center rounded hover:bg-cream-200" onClick={() => onChange(value.filter((x) => x !== v))}>
               <X size={14} />
             </button>
           </span>

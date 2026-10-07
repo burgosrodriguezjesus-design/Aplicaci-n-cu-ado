@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { Clock, Flame, Pencil, Thermometer, Trash2, TriangleAlert, Users } from 'lucide-react';
+import { BookOpen, Clock, Flame, Pencil, Thermometer, Trash2, TriangleAlert, Users } from 'lucide-react';
 import { ALLERGEN_LABELS, type Allergen, type Unit } from '@shared/constants';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -85,7 +85,7 @@ export function RecipeDetail() {
       />
       <div className="grid gap-5 lg:grid-cols-[2fr_3fr]">
         <div className="space-y-4">
-          <Thumb photoId={r.photo_id} emoji="📖" className={r.photo_id ? 'w-full h-52 lg:h-64' : 'w-full h-24 lg:h-40'} rounded="rounded-2xl" />
+          <Thumb photoId={r.photo_id} icon={BookOpen} className={r.photo_id ? 'w-full h-52 lg:h-64' : 'w-full h-24 lg:h-40'} rounded="rounded-xl" />
           <div className="grid grid-cols-4 gap-2 text-center">
             <Info icon={<Users size={18} />} label="Raciones" value={num(r.servings)} />
             <Info icon={<Clock size={18} />} label="Preparar" value={r.prep_minutes ? `${r.prep_minutes}′` : '—'} />
@@ -120,7 +120,7 @@ export function RecipeDetail() {
               {r.used_in.map((p, i) => (
                 <span key={p.id}>
                   {i > 0 && ', '}
-                  <Link to={`/catalogo/${p.id}`} className="font-bold text-berry-600">
+                  <Link to={`/catalogo/${p.id}`} className="font-medium text-berry-600">
                     {p.name}
                   </Link>
                 </span>
@@ -130,8 +130,8 @@ export function RecipeDetail() {
         </div>
 
         <div className="space-y-5">
-          <Card className="p-4 space-y-3 border-2 border-berry-100">
-            <div className="font-extrabold text-lg">¿Para cuántas personas?</div>
+          <Card className="p-4 space-y-3">
+            <div className="font-semibold text-base">¿Para cuántas personas?</div>
             <div className="flex items-center gap-3">
               <NumberInput value={target} onChange={(v) => setServings(v && v > 0 ? v : null)} suffix="raciones" className="w-48" integer />
               {factor !== 1 && <Badge tone="berry">× {num(factor, 2)}</Badge>}
@@ -155,13 +155,13 @@ export function RecipeDetail() {
                         {i.name}
                       </Link>
                     </span>
-                    <span className={cx('font-extrabold text-lg tabular-nums', factor !== 1 && 'text-berry-600')}>{kitchenQty(i.quantity, i.unit)}</span>
+                    <span className={cx('font-semibold text-base tabular-nums', factor !== 1 && 'text-berry-600')}>{kitchenQty(i.quantity, i.unit)}</span>
                     {i.cost !== null && <span className="text-sm text-choco-400 w-16 text-right tabular-nums">{money(i.cost)}</span>}
                   </div>
                 );
               })}
               {view.scaled.cost !== null && (
-                <div className="flex justify-between px-4 py-3 bg-cream-50 font-bold">
+                <div className="flex justify-between px-4 py-3 bg-cream-50 font-medium">
                   <span>Coste total ({num(target ?? r.servings)} raciones)</span>
                   <span>{money(view.scaled.cost)}</span>
                 </div>
@@ -174,7 +174,7 @@ export function RecipeDetail() {
               <ol className="space-y-2.5">
                 {r.steps.map((s, i) => (
                   <li key={i} className="card p-4 flex gap-3">
-                    <span className="h-8 w-8 shrink-0 rounded-full bg-berry-500 text-white font-extrabold flex items-center justify-center">{i + 1}</span>
+                    <span className="h-8 w-8 shrink-0 rounded-full bg-cream-100 border border-cream-200 text-choco-700 text-sm font-medium flex items-center justify-center">{i + 1}</span>
                     <span className="pt-1 text-[16px] leading-relaxed">{s}</span>
                   </li>
                 ))}
@@ -206,8 +206,8 @@ function Info({ icon, label, value }: { icon: React.ReactNode; label: string; va
   return (
     <div className="card py-2.5">
       <div className="flex justify-center text-berry-500">{icon}</div>
-      <div className="font-extrabold">{value}</div>
-      <div className="text-[11px] font-bold text-choco-500">{label}</div>
+      <div className="font-semibold">{value}</div>
+      <div className="text-[11px] font-medium text-choco-500">{label}</div>
     </div>
   );
 }

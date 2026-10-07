@@ -27,7 +27,7 @@ if (process.env.AUTO_BACKUPS !== '0') {
 
 const port = Number(process.env.PORT) || 3000;
 app.listen(port, '0.0.0.0', () => {
-  console.log(`\n🧁 Aplicación de gestión de pastelería en marcha`);
+  console.log(`\nAplicación de gestión de pastelería en marcha`);
   console.log(`   Base de datos: ${process.env.DATABASE_URL ? 'PostgreSQL' : 'local (carpeta data/pglite)'}`);
   console.log(`   En este ordenador:  http://localhost:${port}`);
   for (const addrs of Object.values(os.networkInterfaces())) {

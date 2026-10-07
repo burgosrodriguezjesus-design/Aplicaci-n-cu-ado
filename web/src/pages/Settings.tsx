@@ -154,7 +154,7 @@ function BusinessSettings() {
 
       {dirty && (
         <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4 z-20">
-          <Button block size="lg" loading={save.isPending} onClick={() => save.mutate()} className="shadow-[var(--shadow-float)]">
+          <Button block size="lg" loading={save.isPending} onClick={() => save.mutate()}>
             Guardar configuración
           </Button>
         </div>

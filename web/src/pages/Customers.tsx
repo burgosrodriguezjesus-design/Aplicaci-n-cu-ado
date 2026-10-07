@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { Cake, ChevronRight, Copy, Mail, MapPin, MessageCircle, Pencil, Phone, Plus, Trash2, TriangleAlert, UserPlus } from 'lucide-react';
+import { Cake, ChevronRight, Copy, Mail, MapPin, MessageCircle, Pencil, Phone, Plus, Trash2, TriangleAlert, UserPlus, Users } from 'lucide-react';
 import { ALLERGEN_LABELS, QUOTE_STATUS_LABELS, type Allergen } from '@shared/constants';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -55,14 +55,14 @@ export function Customers() {
       ) : res.error ? (
         <ErrorBox error={res.error} retry={res.refetch} />
       ) : !res.data?.length ? (
-        <Empty icon="👥" title={debounced ? 'Nadie con ese nombre' : 'Aún no hay clientes'} text="Los clientes se guardan solos al crear pedidos, o puedes añadirlos aquí." />
+        <Empty icon={Users} title={debounced ? 'Nadie con ese nombre' : 'Aún no hay clientes'} text="Los clientes se guardan solos al crear pedidos, o puedes añadirlos aquí." />
       ) : (
         <Card className="divide-y divide-cream-200 overflow-hidden">
           {res.data.map((c) => (
             <Link key={c.id} to={`/clientes/${c.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50">
-              <div className="h-11 w-11 rounded-full bg-berry-100 text-berry-700 font-extrabold flex items-center justify-center shrink-0">{c.name.charAt(0)}</div>
+              <div className="h-10 w-10 rounded-full bg-cream-100 border border-cream-200 text-choco-700 font-medium flex items-center justify-center shrink-0">{c.name.charAt(0)}</div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold truncate">
+                <div className="font-medium truncate">
                   {c.name} {c.allergens.length > 0 && <TriangleAlert size={14} className="inline text-red-600" />}
                 </div>
                 <div className="text-sm text-choco-500 truncate">
@@ -70,7 +70,7 @@ export function Customers() {
                   {c.last_order_date && ` · último ${dateShort(c.last_order_date)}`}
                 </div>
               </div>
-              {c.total_spent > 0 && <span className="text-sm font-bold text-choco-700 tabular-nums">{money(c.total_spent)}</span>}
+              {c.total_spent > 0 && <span className="text-sm font-medium text-choco-700 tabular-nums">{money(c.total_spent)}</span>}
               <ChevronRight size={18} className="text-choco-300" />
             </Link>
           ))}
@@ -146,7 +146,7 @@ export function CustomerDetail() {
             )}
           </div>
           {c.allergens.length > 0 && (
-            <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-red-700 font-bold flex gap-2">
+            <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-red-700 font-medium flex gap-2">
               <TriangleAlert size={20} className="shrink-0" /> Alergias: {c.allergens.map((a) => ALLERGEN_LABELS[a as Allergen] ?? a).join(', ')}
             </div>
           )}
@@ -198,7 +198,7 @@ export function CustomerDetail() {
                 <OrderCard o={o} compact />
                 <Link
                   to={`/pedidos/nuevo?repetir=${o.id}`}
-                  className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-lg bg-cream-200 px-2.5 py-1.5 text-xs font-extrabold text-choco-700 hover:bg-cream-300"
+                  className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-lg bg-cream-200 px-2.5 py-1.5 text-xs font-semibold text-choco-700 hover:bg-cream-300"
                 >
                   <Copy size={13} /> Repetir
                 </Link>
@@ -244,9 +244,9 @@ export function CustomerDetail() {
 
 function Stat({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className={`card p-3 text-center ${warn ? 'bg-amber-50 border-amber-200' : ''}`}>
-      <div className="text-xs font-bold text-choco-500">{label}</div>
-      <div className={`text-lg font-extrabold tabular-nums ${warn ? 'text-amber-700' : ''}`}>{value}</div>
+    <div className={`card p-3 text-center `}>
+      <div className="text-xs font-medium text-choco-500">{label}</div>
+      <div className={`text-base font-semibold tabular-nums ${warn ? 'text-amber-700' : ''}`}>{value}</div>
     </div>
   );
 }

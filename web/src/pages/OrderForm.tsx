@@ -398,7 +398,7 @@ export function OrderForm({ mode }: { mode: Mode }) {
                 onRemove={() => set({ items: f.items.filter((x) => x.key !== l.key) })}
               />
             ))}
-            <Button variant="outline" block size="lg" icon={<Plus size={22} />} onClick={() => setPicker(true)} className="border-dashed border-2 border-berry-200 text-berry-600">
+            <Button variant="outline" block size="lg" icon={<Plus size={18} />} onClick={() => setPicker(true)} className="border-dashed">
               {f.items.length ? 'Añadir otro producto' : 'Elegir producto'}
             </Button>
           </div>
@@ -461,8 +461,8 @@ export function OrderForm({ mode }: { mode: Mode }) {
         <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:bottom-0 lg:left-64 z-30 bg-white/95 backdrop-blur border-t border-cream-200 no-print">
           <div className="mx-auto max-w-5xl px-4 lg:px-8 py-3 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-choco-500">Total</div>
-              <div className="text-xl font-extrabold text-choco-900 tabular-nums leading-tight">{money(total)}</div>
+              <div className="text-xs font-medium text-choco-500">Total</div>
+              <div className="text-lg font-semibold text-choco-900 tabular-nums leading-tight">{money(total)}</div>
             </div>
             <Button type="submit" size="lg" loading={save.isPending} disabled={!canSave} className="min-w-44">
               {mode === 'quote' ? 'Guardar presupuesto' : editing ? 'Guardar cambios' : 'Guardar pedido'}
@@ -486,9 +486,9 @@ export function OrderForm({ mode }: { mode: Mode }) {
 
 function FormSection({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <Card className="p-4">
-      <h2 className="flex items-center gap-2.5 font-extrabold text-lg text-choco-900 mb-3">
-        <span className="h-7 w-7 rounded-full bg-berry-100 text-berry-700 text-sm flex items-center justify-center">{n}</span>
+    <Card className="p-4 lg:p-5">
+      <h2 className="flex items-center gap-2.5 font-semibold text-[15px] text-choco-900 mb-4">
+        <span className="h-6 w-6 rounded-md border border-cream-200 bg-cream-50 text-choco-500 text-xs font-medium flex items-center justify-center tabular-nums">{n}</span>
         {title}
       </h2>
       {children}
@@ -527,12 +527,12 @@ function CustomerPicker({
     const last = c?.orders.filter((o) => o.status !== 'cancelado').slice(0, 3) ?? [];
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-3 rounded-xl bg-berry-50 border border-berry-100 p-3">
-          <div className="h-11 w-11 rounded-full bg-white text-berry-600 flex items-center justify-center">
+        <div className="flex items-center gap-3 rounded-lg bg-cream-50 border border-cream-200 p-3">
+          <div className="h-10 w-10 rounded-full bg-white border border-cream-200 text-choco-500 flex items-center justify-center">
             <UserRound />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-extrabold truncate">{f.customer_name}</div>
+            <div className="font-semibold truncate">{f.customer_name}</div>
             <div className="text-sm text-choco-500">{f.customer_phone || 'Sin teléfono'} {c ? `· ${c.orders_count} pedidos` : ''}</div>
           </div>
           <Button variant="ghost" size="sm" onClick={() => set({ customer_id: null, customer_name: '', customer_phone: '' })}>
@@ -540,14 +540,14 @@ function CustomerPicker({
           </Button>
         </div>
         {c && c.allergens.length > 0 && (
-          <div className="rounded-xl bg-red-50 text-red-700 p-2.5 text-sm font-bold flex gap-2">
+          <div className="rounded-xl bg-red-50 text-red-700 p-2.5 text-sm font-medium flex gap-2">
             <TriangleAlert size={18} /> Alergias: {c.allergens.map((a) => ALLERGEN_LABELS[a as Allergen] ?? a).join(', ')}
           </div>
         )}
-        {c?.preferences && <div className="text-sm text-choco-700 bg-cream-100 rounded-xl p-2.5">💡 {c.preferences}</div>}
+        {c?.preferences && <div className="text-sm text-choco-700 bg-cream-100 rounded-lg p-2.5">{c.preferences}</div>}
         {mode === 'order' && last.length > 0 && (
           <div>
-            <div className="text-sm font-bold text-choco-500 mb-1.5">Sus últimos pedidos:</div>
+            <div className="text-sm font-medium text-choco-500 mb-1.5">Sus últimos pedidos:</div>
             <div className="space-y-1.5">
               {last.map((o) => (
                 <div key={o.id} className="flex items-center gap-2 text-sm bg-white border border-cream-200 rounded-xl px-3 py-2">
@@ -607,7 +607,7 @@ function CustomerPicker({
                   setFocused(false);
                 }}
               >
-                <div className="font-bold">{c.name}</div>
+                <div className="font-medium">{c.name}</div>
                 <div className="text-sm text-choco-500">
                   {c.phone ?? 'Sin teléfono'} · {c.orders_count} pedidos
                 </div>
@@ -647,12 +647,12 @@ function LineEditor({
     onChange({ extras: line.extras.some((x) => x.name === e.name) ? line.extras.filter((x) => x.name !== e.name) : [...line.extras, e] });
 
   return (
-    <div className="rounded-2xl border-2 border-cream-200 bg-cream-50 p-3.5 space-y-3.5">
+    <div className="rounded-xl border-2 border-cream-200 bg-cream-50 p-3.5 space-y-3.5">
       <div className="flex items-center gap-3">
         <Thumb photoId={product?.photo_id} category={product?.category} className="h-14 w-14 shrink-0 text-xs" />
         <div className="flex-1 min-w-0">
           {product ? (
-            <div className="font-extrabold text-lg leading-tight">{line.product_name}</div>
+            <div className="font-semibold text-base leading-tight">{line.product_name}</div>
           ) : (
             <Input value={line.product_name} onChange={(e) => onChange({ product_name: e.target.value })} placeholder="Nombre del producto" />
           )}
@@ -730,7 +730,7 @@ function LineEditor({
       </Field>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white border border-cream-200 px-3 py-2.5">
-        <span className="font-bold text-choco-700">Precio</span>
+        <span className="font-medium text-choco-700">Precio</span>
         <NumberInput
           value={line.price}
           onChange={(v) => onChange({ price: v ?? 0, manualPrice: true })}
@@ -739,7 +739,7 @@ function LineEditor({
           aria-label="Precio"
         />
         {product && line.manualPrice && line.price !== catalogPrice(product, line) && (
-          <button type="button" className="text-sm font-bold text-berry-600" onClick={() => onChange({ manualPrice: false })}>
+          <button type="button" className="text-sm font-medium text-berry-600" onClick={() => onChange({ manualPrice: false })}>
             Poner precio de catálogo ({money(catalogPrice(product, line))})
           </button>
         )}
@@ -788,7 +788,7 @@ function ProductPickerSheet({
             <button key={p.id} type="button" onClick={() => onPick(lineFromProduct(p))} className="card overflow-hidden text-left active:scale-[0.98] transition">
               <Thumb photoId={p.photo_id} category={p.category} className="h-24 w-full text-sm" rounded="rounded-none" />
               <div className="p-2.5">
-                <div className="font-bold leading-tight">{p.name}</div>
+                <div className="font-medium leading-tight">{p.name}</div>
                 <div className="text-sm text-choco-500">
                   {p.pricing === 'serving' ? `${money(p.base_price)}/ración` : `${p.sizes.length > 1 ? 'desde ' : ''}${money(fromPrice(p))}`}
                 </div>
@@ -817,7 +817,7 @@ function ProductPickerSheet({
                 price: 0,
               })
             }
-            className={cx('rounded-2xl border-2 border-dashed border-cream-300 p-3 flex flex-col items-center justify-center gap-1 text-choco-500 font-bold min-h-36')}
+            className={cx('rounded-xl border-2 border-dashed border-cream-300 p-3 flex flex-col items-center justify-center gap-1 text-choco-500 font-medium min-h-36')}
           >
             <Plus size={28} />
             Otro producto

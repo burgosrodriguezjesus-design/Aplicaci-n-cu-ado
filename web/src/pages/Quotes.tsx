@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ArrowRight, Check, MessageCircle, Pencil, Plus, Printer, Trash2, X } from 'lucide-react';
+import { ArrowRight, Check, FileText, MessageCircle, Pencil, Plus, Printer, Trash2, X } from 'lucide-react';
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS, QUOTE_STATUS_LABELS } from '@shared/constants';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -69,7 +69,7 @@ export function Quotes() {
         <ErrorBox error={res.error} retry={res.refetch} />
       ) : !list.length ? (
         <Empty
-          icon="📝"
+          icon={FileText}
           title="No hay presupuestos"
           text="Prepara un presupuesto en un momento y, si lo aceptan, conviértelo en pedido con un botón."
           action={
@@ -83,7 +83,7 @@ export function Quotes() {
           {list.map((q) => (
             <Link key={q.id} to={`/presupuestos/${q.id}`} className="card flex items-center gap-3 p-4 active:scale-[0.99] transition">
               <div className="flex-1 min-w-0">
-                <div className="font-extrabold truncate">
+                <div className="font-semibold truncate">
                   {q.customer_name} <span className="text-choco-400 text-sm">#{q.number}</span>
                 </div>
                 <div className="text-sm text-choco-700 truncate">{q.summary}</div>
@@ -93,7 +93,7 @@ export function Quotes() {
                 </div>
               </div>
               <div className="text-right space-y-1">
-                <div className="font-extrabold tabular-nums">{money(q.total)}</div>
+                <div className="font-semibold tabular-nums">{money(q.total)}</div>
                 <Badge tone={TONE[q.status]}>{QUOTE_STATUS_LABELS[q.status]}</Badge>
               </div>
             </Link>
@@ -114,14 +114,14 @@ function quoteText(q: Quote, business: string) {
     return `• ${num(l.quantity)} × ${l.product_name}${det ? ` (${det})` : ''}${ex}: ${money(l.line_total ?? 0)}`;
   });
   return [
-    `¡Hola, ${q.customer_name.split(' ')[0]}! 😊 Te paso el presupuesto #${q.number} de ${business}:`,
+    `Hola, ${q.customer_name.split(' ')[0]}. Te paso el presupuesto #${q.number} de ${business}:`,
     '',
     ...lines,
     q.delivery_fee > 0 ? `• Envío: ${money(q.delivery_fee)}` : '',
     q.discount > 0 ? `• Descuento: −${money(q.discount)}` : '',
     '',
-    `💶 Total: ${money(q.total)}`,
-    q.delivery_date ? `📅 Para el ${dateLong(q.delivery_date)}${q.delivery_time ? ` a las ${q.delivery_time}` : ''}` : '',
+    `Total: ${money(q.total)}`,
+    q.delivery_date ? `Para el ${dateLong(q.delivery_date)}${q.delivery_time ? ` a las ${q.delivery_time}` : ''}` : '',
     `⏳ Válido hasta el ${dateLong(q.valid_until)}.`,
     '',
     '¿Te lo confirmo? ¡Gracias!',
@@ -207,12 +207,12 @@ export function QuoteDetail() {
       <Card className="p-5 space-y-4">
         <div className="flex justify-between gap-4">
           <div>
-            <div className="text-xl font-extrabold">{businessName}</div>
+            <div className="text-lg font-semibold">{businessName}</div>
             {settings.business_phone && <div className="text-sm text-choco-500">{settings.business_phone}</div>}
             {settings.business_address && <div className="text-sm text-choco-500">{settings.business_address}</div>}
           </div>
           <div className="text-right text-sm">
-            <div className="font-extrabold text-lg">PRESUPUESTO #{q.number}</div>
+            <div className="font-semibold text-base">PRESUPUESTO #{q.number}</div>
             <div>Fecha: {dateNumeric(q.date)}</div>
             <div>Válido hasta: {dateNumeric(q.valid_until)}</div>
           </div>
@@ -236,7 +236,7 @@ export function QuoteDetail() {
             {q.items.map((l) => (
               <tr key={l.id} className="border-b border-cream-200 align-top">
                 <td className="py-2">
-                  <div className="font-bold">
+                  <div className="font-medium">
                     {num(l.quantity)} × {l.product_name} {l.size_name && <span className="font-semibold text-choco-500">({l.size_name})</span>}
                   </div>
                   <div className="text-sm text-choco-500">
@@ -246,7 +246,7 @@ export function QuoteDetail() {
                     {l.extras.length > 0 && <div>Extras: {l.extras.map((e) => `${e.name} (${money(e.price)})`).join(', ')}</div>}
                   </div>
                 </td>
-                <td className="py-2 text-right font-bold tabular-nums">{money(l.line_total ?? 0)}</td>
+                <td className="py-2 text-right font-medium tabular-nums">{money(l.line_total ?? 0)}</td>
               </tr>
             ))}
           </tbody>
@@ -267,7 +267,7 @@ export function QuoteDetail() {
                 <td className="text-right">−{money(q.discount)}</td>
               </tr>
             )}
-            <tr className="text-lg font-extrabold">
+            <tr className="text-base font-semibold">
               <td className="pt-1 text-right">Total (IVA incluido)</td>
               <td className="pt-1 text-right">{money(q.total)}</td>
             </tr>
@@ -298,7 +298,7 @@ function ConvertSheet({ q, onClose }: { q: Quote; onClose: () => void }) {
         method: 'POST',
         body: { delivery_date: date, delivery_time: time || null, deposit: deposit ? { amount: deposit, method } : null },
       }),
-    { success: '¡Pedido creado y confirmado! 🎉', onSuccess: (r: { order_id: number }) => nav(`/pedidos/${r.order_id}`) },
+    { success: 'Pedido creado y confirmado', onSuccess: (r: { order_id: number }) => nav(`/pedidos/${r.order_id}`) },
   );
   return (
     <Sheet

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Check, Plus, Trash2, Undo2 } from 'lucide-react';
+import { Check, Plus, ShoppingCart, Trash2, Undo2 } from 'lucide-react';
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS, type Unit } from '@shared/constants';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -103,11 +103,11 @@ export function Shopping() {
       </div>
       <Toggle checked={includeNew} onChange={setIncludeNew} label="Contar también pedidos sin confirmar" />
 
-      <Card className="p-4 bg-gradient-to-br from-white to-caramel-100 border-caramel-500/20">
-        <div className="font-extrabold text-lg leading-snug">
+      <Card className="p-4">
+        <div className="font-semibold text-base leading-snug">
           {d.items.length
             ? `Para los pedidos hasta el ${dateLong(d.until)} necesitas comprar:`
-            : `Tienes todo lo necesario para los pedidos hasta el ${dateLong(d.until)}. 🎉`}
+            : `Tienes todo lo necesario para los pedidos hasta el ${dateLong(d.until)}.`}
         </div>
         <div className="text-sm text-choco-700 mt-1">
           {d.orders.length} {d.orders.length === 1 ? 'pedido' : 'pedidos'} pendientes de preparar
@@ -115,14 +115,14 @@ export function Shopping() {
           {d.orders.slice(0, 8).map((o, i) => (
             <span key={o.id}>
               {i > 0 && ', '}
-              <Link to={`/pedidos/${o.id}`} className="font-bold text-berry-600">
+              <Link to={`/pedidos/${o.id}`} className="font-medium text-berry-600">
                 #{o.number}
               </Link>
             </span>
           ))}
           {d.orders.length > 8 && '…'}
         </div>
-        {showMoney && d.total_est > 0 && <div className="mt-2 font-bold">Gasto estimado: {money(d.total_est)}</div>}
+        {showMoney && d.total_est > 0 && <div className="mt-2 font-medium">Gasto estimado: {money(d.total_est)}</div>}
       </Card>
 
       {groups.map(
@@ -135,18 +135,18 @@ export function Shopping() {
                     key={i.item_id}
                     type="button"
                     onClick={() => check.mutate({ item_id: i.item_id, checked: !i.checked })}
-                    className={cx('w-full flex items-start gap-3 px-4 py-3 text-left transition', i.checked ? 'bg-emerald-50' : 'hover:bg-cream-50')}
+                    className={cx('w-full flex items-start gap-3 px-4 py-3 text-left transition', i.checked ? 'bg-cream-50' : 'hover:bg-cream-50')}
                   >
                     <span
                       className={cx(
-                        'mt-0.5 h-8 w-8 shrink-0 rounded-lg border-[3px] flex items-center justify-center',
-                        i.checked ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-cream-300 bg-white',
+                        'mt-0.5 h-6 w-6 shrink-0 rounded-md border-[1.5px] flex items-center justify-center',
+                        i.checked ? 'bg-choco-900 border-choco-900 text-white' : 'border-cream-300 bg-white',
                       )}
                     >
-                      {i.checked && <Check size={18} strokeWidth={3} />}
+                      {i.checked && <Check size={14} strokeWidth={2.5} />}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className={cx('block font-extrabold text-[17px]', i.checked && 'line-through text-choco-400')}>
+                      <span className={cx('block font-semibold text-[15px]', i.checked && 'line-through text-choco-400')}>
                         {shoppingText(i.suggested, i.unit, i.name)}
                       </span>
                       <span className="block text-sm text-choco-500">
@@ -155,7 +155,7 @@ export function Shopping() {
                         {i.supplier && ` · ${i.supplier}`}
                       </span>
                     </span>
-                    {showMoney && i.est_cost > 0 && <span className="text-sm font-bold text-choco-500 tabular-nums">≈ {money(i.est_cost)}</span>}
+                    {showMoney && i.est_cost > 0 && <span className="text-sm font-medium text-choco-500 tabular-nums">≈ {money(i.est_cost)}</span>}
                   </button>
                 ))}
               </Card>
@@ -171,9 +171,9 @@ export function Shopping() {
                 type="button"
                 onClick={() => toggleExtra.mutate({ id: e.id, done: !e.done })}
                 aria-label={e.done ? 'Desmarcar' : 'Marcar como comprado'}
-                className={cx('h-8 w-8 shrink-0 rounded-lg border-[3px] flex items-center justify-center', e.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-cream-300 bg-white')}
+                className={cx('h-6 w-6 shrink-0 rounded-md border-[1.5px] flex items-center justify-center', e.done ? 'bg-choco-900 border-choco-900 text-white' : 'border-cream-300 bg-white')}
               >
-                {!!e.done && <Check size={18} strokeWidth={3} />}
+                {!!e.done && <Check size={14} strokeWidth={2.5} />}
               </button>
               <span className={cx('flex-1 font-semibold', e.done && 'line-through text-choco-400')}>
                 {e.name} {e.quantity && <span className="text-choco-500 font-normal">({e.quantity})</span>}
@@ -243,7 +243,7 @@ export function Shopping() {
         </div>
       )}
       {checkout && <PurchaseSheet items={checked} extraIds={d.extras.filter((e) => e.done).map((e) => e.id)} onClose={() => setCheckout(false)} />}
-      {!d.items.length && !d.extras.length && !d.recent.length && <Empty icon="🛒" title="Lista vacía" text="Cuando falte algo para tus pedidos o baje del mínimo, aparecerá aquí solo." />}
+      {!d.items.length && !d.extras.length && !d.recent.length && <Empty icon={ShoppingCart} title="Lista vacía" text="Cuando falte algo para tus pedidos o baje del mínimo, aparecerá aquí solo." />}
     </div>
   );
 }
@@ -264,7 +264,7 @@ function PurchaseSheet({ items, extraIds, onClose }: { items: ShopItem[]; extraI
           payment_method: method,
         },
       }),
-    { success: 'Compra registrada: inventario actualizado y gasto anotado ✅', onSuccess: onClose },
+    { success: 'Compra registrada: inventario actualizado y gasto anotado', onSuccess: onClose },
   );
   return (
     <Sheet
@@ -283,7 +283,7 @@ function PurchaseSheet({ items, extraIds, onClose }: { items: ShopItem[]; extraI
         <div className="space-y-2.5">
           {lines.map((l, i) => (
             <div key={l.item_id} className="rounded-xl border border-cream-200 bg-white p-3">
-              <div className="font-bold mb-2">{l.name}</div>
+              <div className="font-medium mb-2">{l.name}</div>
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Cantidad">
                   <NumberInput value={l.quantity} onChange={(quantity) => setLines(lines.map((x, j) => (j === i ? { ...x, quantity } : x)))} suffix={l.unit} />

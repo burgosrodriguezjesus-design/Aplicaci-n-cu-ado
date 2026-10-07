@@ -1,33 +1,33 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Nunito Variable', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  /* Paleta "obrador": crema, chocolate y frambuesa */
-  --color-cream-50: #fffcf8;
-  --color-cream-100: #fbf6f0;
-  --color-cream-200: #f3e8dc;
-  --color-cream-300: #e8d8c7;
+  /* Paleta sobria: neutros cálidos (fondos y texto) y un granate de marca para los detalles. */
+  --color-cream-50: #fafaf9;
+  --color-cream-100: #f5f5f4;
+  --color-cream-200: #e7e5e4;
+  --color-cream-300: #d6d3d1;
 
-  --color-choco-900: #2f1f17;
-  --color-choco-800: #3d2a20;
-  --color-choco-700: #5b4033;
-  --color-choco-500: #8a7265;
-  --color-choco-400: #a8968b;
+  --color-choco-900: #1c1917;
+  --color-choco-800: #292524;
+  --color-choco-700: #44403c;
+  --color-choco-500: #78716c;
+  --color-choco-400: #a8a29e;
 
-  --color-berry-50: #fdf0f4;
-  --color-berry-100: #fbdde7;
-  --color-berry-200: #f6b9cd;
-  --color-berry-500: #d64d78;
-  --color-berry-600: #bf3a64;
-  --color-berry-700: #9e2c50;
+  --color-berry-50: #fbf4f6;
+  --color-berry-100: #f3e3e8;
+  --color-berry-200: #e3c2cc;
+  --color-berry-500: #8f2f4c;
+  --color-berry-600: #7b2841;
+  --color-berry-700: #632035;
 
-  --color-caramel-100: #fdf0d9;
-  --color-caramel-500: #e39b2d;
-  --color-caramel-700: #a96a10;
+  --color-caramel-100: #fbf3e4;
+  --color-caramel-500: #b7791f;
+  --color-caramel-700: #8a5a14;
 
-  --shadow-card: 0 1px 2px rgb(61 42 32 / 0.05), 0 4px 16px -6px rgb(61 42 32 / 0.12);
-  --shadow-float: 0 10px 30px -10px rgb(158 44 80 / 0.55);
+  --shadow-card: 0 1px 2px rgb(28 25 23 / 0.04);
+  --shadow-float: 0 8px 24px -8px rgb(28 25 23 / 0.35);
 }
 
 @layer base {
@@ -37,7 +37,22 @@
   }
   body {
     @apply bg-cream-100 text-choco-800 font-sans antialiased;
-    font-size: 16px;
+    font-size: 15px;
+    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: -0.006em;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+  b,
+  strong {
+    font-weight: 600;
+  }
+  .tabular-nums,
+  input {
+    font-variant-numeric: tabular-nums;
   }
   input,
   select,
@@ -52,28 +67,28 @@
     font-size: 16px;
   }
   :focus-visible {
-    outline: 3px solid var(--color-berry-200);
+    outline: 2px solid var(--color-choco-900);
     outline-offset: 2px;
   }
   input[type='date'],
   input[type='time'] {
-    min-height: 3rem;
+    min-height: 2.75rem;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-2xl shadow-[var(--shadow-card)] border border-cream-200;
+    @apply bg-white rounded-xl shadow-[var(--shadow-card)] border border-cream-200;
   }
   .input {
-    @apply w-full rounded-xl border border-cream-300 bg-white px-3.5 py-3 text-choco-800 placeholder:text-choco-400
-      focus:border-berry-500 focus:outline-none focus:ring-4 focus:ring-berry-100 transition;
+    @apply w-full rounded-lg border border-cream-300 bg-white px-3 py-2.5 text-choco-900 placeholder:text-choco-400
+      shadow-[0_1px_2px_rgb(28_25_23/0.04)] focus:border-choco-900 focus:outline-none focus:ring-2 focus:ring-choco-900/10 transition;
   }
   .label {
-    @apply block text-sm font-bold text-choco-700 mb-1.5;
+    @apply block text-[13px] font-medium text-choco-700 mb-1.5;
   }
   .section-title {
-    @apply text-xs font-extrabold uppercase tracking-wider text-choco-500;
+    @apply text-[13px] font-semibold text-choco-900;
   }
   .scroll-x {
     @apply flex gap-2 overflow-x-auto pb-1;

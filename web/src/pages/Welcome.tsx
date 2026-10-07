@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link2 } from 'lucide-react';
+import { CakeSlice, Link2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Button, Field, Input } from '../components/ui';
@@ -35,13 +35,17 @@ export function Welcome() {
   };
 
   return (
-    <div className="min-h-dvh flex items-center justify-center p-4 bg-gradient-to-b from-berry-50 to-cream-100">
+    <div className="min-h-dvh flex items-center justify-center p-4 bg-cream-100">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-6">
-          <div className="text-6xl mb-2">🧁</div>
-          <h1 className="text-2xl font-extrabold text-choco-900">{mode === 'create' ? '¡Vamos a empezar!' : 'Abrir mi pastelería'}</h1>
-          <p className="text-choco-500 mt-1">
-            {mode === 'create' ? 'Crea tu pastelería en un minuto. Sin usuario ni contraseña.' : 'Pega el enlace de acceso que guardaste.'}
+        <div className="mb-6">
+          <span className="h-10 w-10 rounded-lg bg-choco-900 text-white flex items-center justify-center mb-5">
+            <CakeSlice size={20} strokeWidth={1.75} />
+          </span>
+          <h1 className="text-[22px] font-semibold text-choco-900">{mode === 'create' ? 'Crea tu pastelería' : 'Abrir mi pastelería'}</h1>
+          <p className="text-sm text-choco-500 mt-1">
+            {mode === 'create'
+              ? 'Pedidos, producción, recetas, inventario y finanzas en un solo sitio. Sin registro ni contraseña.'
+              : 'Pega el enlace de acceso que guardaste.'}
           </p>
         </div>
         <div className="card p-5">
@@ -55,7 +59,7 @@ export function Welcome() {
               </Field>
               {error && <p className="text-red-600 font-semibold text-sm">{error}</p>}
               <Button type="submit" block size="lg" loading={loading} disabled={!f.business_name.trim()}>
-                Crear mi pastelería
+                Empezar
               </Button>
             </form>
           ) : (
@@ -72,7 +76,7 @@ export function Welcome() {
         </div>
         <button
           type="button"
-          className="mt-5 w-full flex items-center justify-center gap-2 font-bold text-berry-600"
+          className="mt-5 w-full flex items-center justify-center gap-2 text-sm font-medium text-choco-500 hover:text-choco-900"
           onClick={() => {
             setMode(mode === 'create' ? 'link' : 'create');
             setError('');
@@ -80,7 +84,7 @@ export function Welcome() {
         >
           {mode === 'create' ? (
             <>
-              <Link2 size={18} /> Ya tengo una pastelería en otro dispositivo
+              <Link2 size={15} /> Ya tengo una pastelería en otro dispositivo
             </>
           ) : (
             'Crear una pastelería nueva'

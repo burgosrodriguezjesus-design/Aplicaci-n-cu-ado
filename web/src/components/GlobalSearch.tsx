@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { createPortal } from 'react-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen, Package, Wheat } from 'lucide-react';
 import { useApi } from '../lib/api';
 import { qty, money } from '../lib/format';
 import type { OrderSummary } from '../lib/types';
@@ -74,9 +74,9 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
               <div className="card divide-y divide-cream-200">
                 {r.customers.map((c) => (
                   <Link key={c.id} to={`/clientes/${c.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50">
-                    <div className="h-10 w-10 rounded-full bg-berry-100 text-berry-700 font-extrabold flex items-center justify-center">{c.name.charAt(0)}</div>
+                    <div className="h-10 w-10 rounded-full bg-cream-100 border border-cream-200 text-choco-700 font-medium flex items-center justify-center">{c.name.charAt(0)}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold truncate">{c.name}</div>
+                      <div className="font-medium truncate">{c.name}</div>
                       <div className="text-sm text-choco-500">{c.phone ?? 'Sin teléfono'} · {c.orders_count} pedidos</div>
                     </div>
                   </Link>
@@ -90,7 +90,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
                 {r.products.map((p) => (
                   <Link key={p.id} to={`/catalogo/${p.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50">
                     <Thumb photoId={p.photo_id} category={p.category} className="h-10 w-10 text-[10px]" />
-                    <div className="flex-1 font-bold">{p.name}</div>
+                    <div className="flex-1 font-medium">{p.name}</div>
                     {p.base_price > 0 && <span className="text-choco-500">{money(p.base_price)}</span>}
                   </Link>
                 ))}
@@ -102,8 +102,8 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
               <div className="card divide-y divide-cream-200">
                 {r.recipes.map((p) => (
                   <Link key={p.id} to={`/recetas/${p.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50">
-                    <Thumb photoId={p.photo_id} emoji="📖" className="h-10 w-10 text-[10px]" />
-                    <div className="flex-1 font-bold">{p.name}</div>
+                    <Thumb photoId={p.photo_id} icon={BookOpen} className="h-10 w-10" />
+                    <div className="flex-1 font-medium">{p.name}</div>
                     <span className="text-choco-500 text-sm">{p.servings} raciones</span>
                   </Link>
                 ))}
@@ -115,8 +115,8 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
               <div className="card divide-y divide-cream-200">
                 {r.items.map((i) => (
                   <Link key={i.id} to={`/inventario/${i.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50">
-                    <span className="text-xl">{i.kind === 'ingredient' ? '🥚' : '📦'}</span>
-                    <div className="flex-1 font-bold">{i.name}</div>
+                    <span className="h-10 w-10 rounded-lg border border-cream-200 bg-cream-50 flex items-center justify-center text-choco-400">{i.kind === 'ingredient' ? <Wheat size={18} strokeWidth={1.75} /> : <Package size={18} strokeWidth={1.75} />}</span>
+                    <div className="flex-1 font-medium">{i.name}</div>
                     <span className="text-choco-500 text-sm">{qty(i.quantity, i.unit)}</span>
                   </Link>
                 ))}

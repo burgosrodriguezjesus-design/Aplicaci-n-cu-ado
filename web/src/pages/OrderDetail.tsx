@@ -22,7 +22,6 @@ import {
   PAYMENT_KIND_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_METHODS,
-  STAGE_EMOJI,
   STAGE_LABELS,
   STATUS_LABELS,
   STATUS_RANK,
@@ -37,27 +36,7 @@ import { dateLong, money, num, qty, relDay, today } from '../lib/format';
 import type { Order } from '../lib/types';
 import { PhotoViewer } from '../components/PhotoPicker';
 import { imageUrl } from '../lib/image';
-import {
-  Badge,
-  Button,
-  Card,
-  Chip,
-  Collapsible,
-  cx,
-  ErrorBox,
-  Field,
-  Input,
-  Loading,
-  NumberInput,
-  PageHeader,
-  Section,
-  Segmented,
-  Sheet,
-  STATUS_STYLE,
-  StatusBadge,
-  Thumb,
-  useConfirm,
-} from '../components/ui';
+import { Badge, Button, Card, Chip, Collapsible, ErrorBox, Field, Input, Loading, NumberInput, PageHeader, STATUS_STYLE, Section, Segmented, Sheet, StageIcon, StatusBadge, Thumb, cx, useConfirm } from '../components/ui';
 
 const FLOW: OrderStatus[] = ['nuevo', 'confirmado', 'pendiente', 'en_preparacion', 'terminado', 'entregado'];
 
@@ -80,14 +59,14 @@ export function orderMessage(o: Order, business: string) {
   const when = `${dateLong(o.delivery_date)}${o.delivery_time ? ` a las ${o.delivery_time}` : ''}`;
   const where = o.delivery_type === 'delivery' ? `Entrega a domicilio${o.delivery_address ? ` en ${o.delivery_address}` : ''}` : 'Recogida en tienda';
   return [
-    `¡Hola, ${o.customer_name.split(' ')[0]}! 🧁`,
+    `Hola, ${o.customer_name.split(' ')[0]}.`,
     `Te confirmamos tu pedido #${o.number} en ${business}:`,
     '',
     ...lines,
     '',
-    `📅 ${when.charAt(0).toUpperCase() + when.slice(1)}`,
-    `📍 ${where}`,
-    `💶 Total: ${money(o.total)}${o.paid > 0 ? ` · Pagado: ${money(o.paid)} · Pendiente: ${money(o.pending)}` : ''}`,
+    `${when.charAt(0).toUpperCase() + when.slice(1)}`,
+    `${where}`,
+    `Total: ${money(o.total)}${o.paid > 0 ? ` · Pagado: ${money(o.paid)} · Pendiente: ${money(o.pending)}` : ''}`,
     '',
     '¡Muchas gracias!',
   ].join('\n');
@@ -168,10 +147,10 @@ export function OrderDetail() {
       />
 
       {/* Estado */}
-      <Card className={cx('p-4 border-l-[6px]', STATUS_STYLE[o.status].bar)}>
+      <Card className="p-4">
         <div className="flex items-center justify-between gap-2 mb-3">
           <StatusBadge status={o.status} long className="text-sm" />
-          {late && <Badge tone="red">⚠️ Atrasado</Badge>}
+          {late && <Badge tone="red">Atrasado</Badge>}
         </div>
         <div className="scroll-x -mx-1 px-1 no-print">
           {FLOW.map((s, i) => {
@@ -182,11 +161,11 @@ export function OrderDetail() {
                 type="button"
                 onClick={() => changeStatus(s)}
                 className={cx(
-                  'shrink-0 flex items-center gap-1.5 rounded-full px-3 h-9 text-xs font-extrabold border transition',
-                  o.status === s ? cx(STATUS_STYLE[s].badge, 'ring-2 border-transparent') : done ? 'bg-cream-200 border-cream-200 text-choco-700' : 'bg-white border-cream-300 text-choco-400',
+                  'shrink-0 flex items-center gap-1.5 rounded-md px-2.5 h-8 text-xs font-medium border transition',
+                  o.status === s ? 'bg-choco-900 border-choco-900 text-white' : done ? 'bg-cream-50 border-cream-200 text-choco-700 hover:border-cream-300' : 'bg-white border-cream-200 text-choco-400 hover:border-cream-300',
                 )}
               >
-                {done && o.status !== s ? <Check size={13} /> : <span className={cx('h-2 w-2 rounded-full', STATUS_STYLE[s].dot)} />}
+                {done && o.status !== s ? <Check size={13} /> : <span className={cx('h-1.5 w-1.5 rounded-full', STATUS_STYLE[s].dot)} />}
                 {STATUS_LABELS[s]}
               </button>
             );
@@ -207,7 +186,7 @@ export function OrderDetail() {
       </Card>
 
       {o.allergen_warnings.length > 0 && (
-        <div className="rounded-2xl bg-red-600 text-white p-4 font-bold flex gap-3">
+        <div className="rounded-xl bg-red-600 text-white p-4 font-medium flex gap-3">
           <TriangleAlert className="shrink-0" />
           <div>
             {o.allergen_warnings.map((w) => (
@@ -221,18 +200,18 @@ export function OrderDetail() {
         {/* Entrega */}
         <Card className="p-4 space-y-3">
           <div className="flex items-start gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-berry-50 text-berry-600 flex items-center justify-center shrink-0">
+            <div className="h-11 w-11 rounded-lg border border-cream-200 bg-cream-50 text-choco-700 flex items-center justify-center shrink-0">
               <CalendarDays />
             </div>
             <div>
-              <div className={cx('text-xl font-extrabold first-letter:uppercase', late && 'text-red-600')}>
+              <div className={cx('text-lg font-semibold first-letter:uppercase', late && 'text-red-600')}>
                 {relDay(o.delivery_date)} {o.delivery_time ? `· ${o.delivery_time}` : ''}
               </div>
               <div className="text-choco-500 first-letter:uppercase">{dateLong(o.delivery_date)}</div>
               <div className="text-sm text-choco-500 mt-1">Se prepara: {relDay(o.production_day).toLowerCase()}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 font-bold">
+          <div className="flex items-center gap-2 font-medium">
             {o.delivery_type === 'delivery' ? <Truck size={20} /> : <Store size={20} />}
             {o.delivery_type === 'delivery' ? 'Entrega a domicilio' : 'Recoge en tienda'}
             {o.delivery_fee > 0 && <span className="text-choco-500 font-semibold">({money(o.delivery_fee)})</span>}
@@ -247,16 +226,16 @@ export function OrderDetail() {
         {/* Cliente */}
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-berry-100 text-berry-700 text-xl font-extrabold flex items-center justify-center shrink-0">
+            <div className="h-11 w-11 rounded-full bg-cream-100 border border-cream-200 text-choco-700 text-base font-medium flex items-center justify-center shrink-0">
               {o.customer_name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
               {o.customer_id ? (
-                <Link to={`/clientes/${o.customer_id}`} className="text-xl font-extrabold hover:underline">
+                <Link to={`/clientes/${o.customer_id}`} className="text-lg font-semibold hover:underline">
                   {o.customer_name}
                 </Link>
               ) : (
-                <div className="text-xl font-extrabold">{o.customer_name}</div>
+                <div className="text-lg font-semibold">{o.customer_name}</div>
               )}
               <div className="text-choco-500">{o.customer_phone || 'Sin teléfono'}</div>
             </div>
@@ -284,13 +263,13 @@ export function OrderDetail() {
           {o.items.map((l) => (
             <Card key={l.id} className="p-4">
               <div className="flex gap-3">
-                <Thumb photoId={l.product_photo_id} emoji="🎂" className="h-16 w-16 shrink-0 text-sm" />
+                <Thumb photoId={l.product_photo_id} className="h-16 w-16 shrink-0 text-sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-lg font-extrabold leading-tight">
+                    <div className="text-base font-semibold leading-tight">
                       {num(l.quantity)} × {l.product_name}
                     </div>
-                    <div className="font-extrabold tabular-nums">{money(l.line_total ?? 0)}</div>
+                    <div className="font-semibold tabular-nums">{money(l.line_total ?? 0)}</div>
                   </div>
                   {l.size_name && <div className="text-choco-700 font-semibold">{l.size_name}</div>}
                   {l.servings && <div className="text-sm text-choco-500">{num(l.servings)} raciones/personas{l.quantity > 1 ? ' cada una' : ''}</div>}
@@ -306,8 +285,8 @@ export function OrderDetail() {
               </dl>
               {l.custom_text && (
                 <div className="mt-3 rounded-xl bg-caramel-100 border border-caramel-500/30 px-3 py-2">
-                  <div className="text-xs font-extrabold uppercase text-caramel-700">Texto en la tarta</div>
-                  <div className="text-lg font-extrabold">«{l.custom_text}»</div>
+                  <div className="text-xs font-semibold uppercase text-caramel-700">Texto en la tarta</div>
+                  <div className="text-base font-semibold">«{l.custom_text}»</div>
                 </div>
               )}
               {l.contains && l.contains.length > 0 && (
@@ -322,12 +301,12 @@ export function OrderDetail() {
         <div className="grid gap-5 lg:grid-cols-2">
           {o.allergens.length > 0 && (
             <Card className="p-4 border-red-200 bg-red-50">
-              <div className="font-extrabold text-red-700 flex items-center gap-2 mb-2">
+              <div className="font-semibold text-red-700 flex items-center gap-2 mb-2">
                 <TriangleAlert size={20} /> No puede llevar
               </div>
               <div className="flex flex-wrap gap-2">
                 {o.allergens.map((a) => (
-                  <span key={a} className="rounded-full bg-red-600 text-white px-3 py-1 font-bold text-sm">
+                  <span key={a} className="rounded-md bg-red-50 text-red-800 ring-1 ring-inset ring-red-600/20 px-2.5 py-1 font-medium text-sm">
                     {ALLERGEN_LABELS[a as Allergen] ?? a}
                   </span>
                 ))}
@@ -348,7 +327,7 @@ export function OrderDetail() {
           <div className="flex flex-wrap gap-2.5">
             {o.images.map((img) => (
               <button key={img} type="button" onClick={() => setPhoto(img)}>
-                <img src={imageUrl(img)} alt="Foto de referencia" className="h-32 w-32 rounded-2xl object-cover border border-cream-300" />
+                <img src={imageUrl(img)} alt="Foto de referencia" className="h-32 w-32 rounded-xl object-cover border border-cream-300" />
               </button>
             ))}
           </div>
@@ -378,7 +357,7 @@ export function OrderDetail() {
                       <b>{PAYMENT_KIND_LABELS[p.kind]}</b> · {PAYMENT_METHOD_LABELS[p.method as PaymentMethod] ?? p.method}
                       <span className="block text-xs text-choco-500">{relDay(p.paid_at.slice(0, 10))} {p.paid_at.slice(11, 16)}</span>
                     </span>
-                    <span className={cx('font-extrabold tabular-nums', p.kind === 'refund' && 'text-red-600')}>
+                    <span className={cx('font-semibold tabular-nums', p.kind === 'refund' && 'text-red-600')}>
                       {p.kind === 'refund' ? '−' : ''}
                       {money(p.amount)}
                     </span>
@@ -426,10 +405,10 @@ export function OrderDetail() {
                       }}
                       className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-cream-100 text-left"
                     >
-                      <span className={cx('h-8 w-8 rounded-lg border-2 flex items-center justify-center shrink-0 transition', t.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-cream-300 bg-white')}>
-                        {!!t.done && <Check size={18} strokeWidth={3} />}
+                      <span className={cx('h-6 w-6 rounded-md border-[1.5px] flex items-center justify-center shrink-0 transition', t.done ? 'bg-choco-900 border-choco-900 text-white' : 'border-cream-300 bg-white')}>
+                        {!!t.done && <Check size={14} strokeWidth={2.5} />}
                       </span>
-                      <span className="text-xl">{STAGE_EMOJI[t.stage]}</span>
+                      <StageIcon stage={t.stage} />
                       <span className="flex-1">
                         <span className={cx(t.done && 'line-through text-choco-400')}>
                           <b>{STAGE_LABELS[t.stage]}</b> {t.stage !== 'entregar' && `· ${t.title}`}
@@ -460,7 +439,7 @@ export function OrderDetail() {
             {o.requirements.map((r) => (
               <Link key={r.item_id} to={`/inventario/${r.item_id}`} className="flex items-center gap-2 py-2">
                 <span className="flex-1">{r.name}</span>
-                <span className="font-bold tabular-nums">{qty(r.needed, r.unit)}</span>
+                <span className="font-medium tabular-nums">{qty(r.needed, r.unit)}</span>
                 {!o.stock_consumed_at &&
                   (r.missing > 0 ? <Badge tone="red">Faltan {qty(r.missing, r.unit)}</Badge> : <Badge tone="green">OK</Badge>)}
                 <ChevronRight size={16} className="text-choco-300" />
@@ -515,9 +494,9 @@ function Detail({ label, value }: { label: string; value: string | null | undefi
 
 function MoneyBox({ label, value, tone }: { label: string; value: number; tone?: 'green' | 'amber' }) {
   return (
-    <div className={cx('rounded-xl py-2', tone === 'amber' ? 'bg-amber-50' : tone === 'green' ? 'bg-emerald-50' : 'bg-cream-100')}>
-      <div className="text-xs font-bold text-choco-500">{label}</div>
-      <div className={cx('text-lg font-extrabold tabular-nums', tone === 'amber' && 'text-amber-700', tone === 'green' && 'text-emerald-700')}>{money(value)}</div>
+    <div className="rounded-lg py-2 border border-cream-200 bg-cream-50">
+      <div className="text-xs font-medium text-choco-500">{label}</div>
+      <div className={cx('text-base font-semibold tabular-nums', tone === 'amber' && 'text-amber-700', tone === 'green' && 'text-emerald-700')}>{money(value)}</div>
     </div>
   );
 }
@@ -585,14 +564,14 @@ function DeliverSheet({ open, onClose, order }: { open: boolean; onClose: () => 
       if (collect) await api(`/orders/${order.id}/payments`, { method: 'POST', body: { kind: 'payment', amount: order.pending, method } });
       return api(`/orders/${order.id}/status`, { method: 'PATCH', body: { status: 'entregado' } });
     },
-    { success: '¡Pedido entregado! Registrado como venta 🎉', onSuccess: onClose },
+    { success: 'Pedido entregado y registrado como venta', onSuccess: onClose },
   );
   return (
     <Sheet open={open} onClose={onClose} title="Entregar pedido">
       <div className="space-y-4">
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-center">
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center">
           <div className="text-choco-700 font-semibold">Queda por cobrar</div>
-          <div className="text-3xl font-extrabold text-amber-700">{money(order.pending)}</div>
+          <div className="text-3xl font-semibold text-amber-700">{money(order.pending)}</div>
         </div>
         <div>
           <span className="label">¿Cómo paga?</span>

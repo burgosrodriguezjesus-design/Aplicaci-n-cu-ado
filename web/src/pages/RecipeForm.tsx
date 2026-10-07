@@ -105,7 +105,7 @@ export function RecipeForm() {
 
   const options = [
     ...items.data.filter((i) => i.kind === 'ingredient').map((i) => ({ value: i.id, label: i.name })),
-    ...items.data.filter((i) => i.kind === 'material').map((i) => ({ value: i.id, label: `📦 ${i.name}` })),
+    ...items.data.filter((i) => i.kind === 'material').map((i) => ({ value: i.id, label: `${i.name} (material)` })),
   ];
 
   return (
@@ -146,7 +146,7 @@ export function RecipeForm() {
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h2 className="font-extrabold text-lg">Ingredientes</h2>
+        <h2 className="font-semibold text-base">Ingredientes</h2>
         {f.ingredients.map((ing) => {
           const it = ing.item_id ? itemMap.get(ing.item_id) : undefined;
           const units = it ? compatibleUnits(it.unit) : (['g', 'kg', 'ml', 'l', 'ud'] as Unit[]);
@@ -182,10 +182,10 @@ export function RecipeForm() {
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h2 className="font-extrabold text-lg">Paso a paso</h2>
+        <h2 className="font-semibold text-base">Paso a paso</h2>
         {f.steps.map((s, i) => (
           <div key={i} className="flex gap-2 items-start">
-            <span className="h-8 w-8 mt-2 shrink-0 rounded-full bg-berry-100 text-berry-700 font-extrabold flex items-center justify-center">{i + 1}</span>
+            <span className="h-8 w-8 mt-2 shrink-0 rounded-full bg-cream-100 border border-cream-200 text-choco-700 text-sm font-medium flex items-center justify-center">{i + 1}</span>
             <Textarea rows={2} value={s} onChange={(e) => setF({ ...f, steps: f.steps.map((x, j) => (j === i ? e.target.value : x)) })} placeholder="Describe este paso" />
             <div className="flex flex-col">
               <IconButton label="Subir" className="h-8 w-8" onClick={() => moveStep(i, -1)} disabled={i === 0}>

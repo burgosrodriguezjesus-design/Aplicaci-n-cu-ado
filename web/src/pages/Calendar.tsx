@@ -86,7 +86,7 @@ export function CalendarPage() {
             <ChevronLeft size={26} />
           </IconButton>
           <div className="flex-1 text-center">
-            <div className="font-extrabold text-lg first-letter:uppercase">{title}</div>
+            <div className="font-semibold text-base first-letter:uppercase">{title}</div>
             {view === 'dia' && <div className="text-sm text-choco-500 first-letter:uppercase">{dateLong(date)}</div>}
           </div>
           <IconButton label="Siguiente" onClick={() => move(1)}>
@@ -144,7 +144,7 @@ function MonthView({
   return (
     <div className="space-y-4">
       <Card className="p-2 sm:p-3">
-        <div className="grid grid-cols-7 text-center text-xs font-extrabold text-choco-500 mb-1">
+        <div className="grid grid-cols-7 text-center text-xs font-semibold text-choco-500 mb-1">
           {WEEKDAYS.map((w) => (
             <div key={w} className="py-1">
               {w}
@@ -162,15 +162,15 @@ function MonthView({
                 onClick={() => onSelect(d)}
                 className={cx(
                   'min-h-16 sm:min-h-24 rounded-xl p-1 text-left flex flex-col transition border',
-                  d === selected ? 'border-berry-500 bg-berry-50' : 'border-transparent hover:bg-cream-100',
+                  d === selected ? 'border-choco-900 bg-cream-50' : 'border-transparent hover:bg-cream-100',
                   !inMonth && 'opacity-40',
                 )}
                 aria-label={`${dateLong(d)}: ${list.length} pedidos`}
               >
                 <span
                   className={cx(
-                    'text-sm font-extrabold h-7 w-7 flex items-center justify-center rounded-full self-center sm:self-start',
-                    d === t && 'bg-berry-500 text-white',
+                    'text-sm font-semibold h-7 w-7 flex items-center justify-center rounded-full self-center sm:self-start',
+                    d === t && 'bg-choco-900 text-white',
                   )}
                 >
                   {parseDate(d).getDate()}
@@ -180,15 +180,15 @@ function MonthView({
                   {list.slice(0, 4).map((o) => (
                     <span key={o.id} className={cx('h-2 w-2 rounded-full', STATUS_STYLE[o.status].dot)} />
                   ))}
-                  {list.length > 4 && <span className="text-[10px] font-bold leading-none">+{list.length - 4}</span>}
+                  {list.length > 4 && <span className="text-[10px] font-medium leading-none">+{list.length - 4}</span>}
                 </div>
                 <div className="hidden sm:flex flex-col gap-0.5 mt-0.5 w-full">
                   {list.slice(0, 3).map((o) => (
-                    <span key={o.id} className={cx('truncate rounded px-1 text-[11px] font-bold', STATUS_STYLE[o.status].badge)}>
+                    <span key={o.id} className={cx('truncate rounded px-1 text-[11px] font-medium', STATUS_STYLE[o.status].badge)}>
                       {o.delivery_time ?? ''} {o.customer_name.split(' ')[0]}
                     </span>
                   ))}
-                  {list.length > 3 && <span className="text-[11px] font-bold text-choco-500 px-1">+{list.length - 3} más</span>}
+                  {list.length > 3 && <span className="text-[11px] font-medium text-choco-500 px-1">+{list.length - 3} más</span>}
                 </div>
               </button>
             );
@@ -206,9 +206,9 @@ function DayBlock({ date, list, big }: { date: string; list: OrderSummary[]; big
     <section className="space-y-2">
       {!big && (
         <h2 className="flex items-baseline gap-2 px-1">
-          <span className={cx('font-extrabold', date === today() ? 'text-berry-600' : 'text-choco-800')}>{relDay(date)}</span>
+          <span className={cx('font-semibold', date === today() ? 'text-berry-600' : 'text-choco-800')}>{relDay(date)}</span>
           <span className="text-sm text-choco-500 first-letter:uppercase">{dateLong(date)}</span>
-          <span className="ml-auto text-sm font-bold text-choco-400">{list.length || ''}</span>
+          <span className="ml-auto text-sm font-medium text-choco-400">{list.length || ''}</span>
         </h2>
       )}
       {sorted.length ? (
@@ -220,7 +220,7 @@ function DayBlock({ date, list, big }: { date: string; list: OrderSummary[]; big
       ) : (
         <Link
           to={`/pedidos/nuevo?fecha=${date >= today() ? date : today()}`}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-cream-300 py-4 text-choco-400 font-bold hover:text-berry-600 hover:border-berry-200"
+          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-cream-300 py-4 text-choco-400 font-medium hover:text-choco-900 hover:border-crrry-200"
         >
           <Plus size={18} /> Sin pedidos · añadir
         </Link>

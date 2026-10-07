@@ -25,7 +25,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {items.map((t) => (
           <div
             key={t.id}
-            className={`anim-sheet pointer-events-auto flex items-center gap-2 rounded-2xl px-4 py-3 text-[15px] font-semibold shadow-lg max-w-md ${
+            className={`anim-sheet pointer-events-auto flex items-center gap-2 rounded-xl px-4 py-3 text-[15px] font-semibold shadow-lg max-w-md ${
               t.kind === 'error' ? 'bg-red-600 text-white' : 'bg-choco-800 text-white'
             }`}
           >

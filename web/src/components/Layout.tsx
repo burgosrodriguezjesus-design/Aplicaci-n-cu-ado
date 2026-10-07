@@ -31,15 +31,15 @@ const MAIN = [
 ];
 
 export const MORE = [
-  { to: '/clientes', label: 'Clientes', icon: Users, emoji: '👥' },
-  { to: '/recetas', label: 'Recetas', icon: BookOpen, emoji: '📖' },
-  { to: '/inventario', label: 'Inventario', icon: Package, emoji: '📦' },
-  { to: '/compras', label: 'Compras', icon: ShoppingCart, emoji: '🛒' },
-  { to: '/finanzas', label: 'Finanzas', icon: Wallet, emoji: '💶', perm: 'finances' as const },
-  { to: '/catalogo', label: 'Catálogo', icon: CakeSlice, emoji: '🎂' },
-  { to: '/presupuestos', label: 'Presupuestos', icon: FileText, emoji: '📝' },
-  { to: '/avisos', label: 'Recordatorios', icon: Bell, emoji: '🔔' },
-  { to: '/ajustes', label: 'Configuración', icon: Settings, emoji: '⚙️' },
+  { to: '/clientes', label: 'Clientes', hint: 'Fichas, historial y cumpleaños', icon: Users },
+  { to: '/recetas', label: 'Recetas', hint: 'Ingredientes y escalado', icon: BookOpen },
+  { to: '/inventario', label: 'Inventario', hint: 'Stock y movimientos', icon: Package },
+  { to: '/compras', label: 'Compras', hint: 'Lista de la compra', icon: ShoppingCart },
+  { to: '/finanzas', label: 'Finanzas', hint: 'Ingresos, gastos y beneficio', icon: Wallet, perm: 'finances' as const },
+  { to: '/catalogo', label: 'Catálogo', hint: 'Productos, tamaños y precios', icon: CakeSlice },
+  { to: '/presupuestos', label: 'Presupuestos', hint: 'Enviar y convertir en pedido', icon: FileText },
+  { to: '/avisos', label: 'Recordatorios', hint: 'Avisos y tareas pendientes', icon: Bell },
+  { to: '/ajustes', label: 'Configuración', hint: 'Negocio, copias y acceso', icon: Settings },
 ];
 
 const MORE_PATHS = MORE.map((m) => m.to).concat('/mas');
@@ -73,18 +73,18 @@ export function Layout() {
     <div className="min-h-dvh lg:pl-64">
       {/* Barra lateral (ordenador) */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col bg-white border-r border-cream-200 z-30">
-        <Link to="/" className="flex items-center gap-2.5 px-5 h-16 border-b border-cream-200">
-          <span className="text-2xl">🧁</span>
-          <span className="font-extrabold text-lg text-choco-900 truncate">{businessName}</span>
+        <Link to="/" className="flex items-center gap-2.5 px-4 h-14 border-b border-cream-200">
+          <Logo name={businessName} />
+          <span className="font-semibold text-[15px] text-choco-900 truncate">{businessName}</span>
         </Link>
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-cream-300 px-3 h-10 text-choco-400 hover:border-berry-200 text-sm"
+          className="mx-3 mt-3 flex items-center gap-2 rounded-lg border border-cream-200 bg-cream-50 px-2.5 h-9 text-choco-400 hover:border-cream-300 text-[13px]"
         >
-          <Search size={18} /> Buscar… <kbd className="ml-auto text-xs bg-cream-100 rounded px-1.5">Ctrl K</kbd>
+          <Search size={15} /> Buscar… <kbd className="ml-auto text-[11px] font-sans border border-cream-200 bg-white rounded px-1.5">Ctrl K</kbd>
         </button>
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-px">
           {[...MAIN, ...visibleMore].map((item) => (
             <NavLink
               key={item.to}
@@ -92,15 +92,15 @@ export function Layout() {
               end={'end' in item ? item.end : false}
               className={({ isActive }) =>
                 cx(
-                  'flex items-center gap-3 rounded-xl px-3 h-11 font-bold transition',
-                  isActive ? 'bg-berry-50 text-berry-600' : 'text-choco-700 hover:bg-cream-100',
+                  'flex items-center gap-2.5 rounded-md px-2.5 h-9 text-sm transition',
+                  isActive ? 'bg-cream-100 text-choco-900 font-medium' : 'text-choco-500 hover:bg-cream-50 hover:text-choco-900',
                 )
               }
             >
-              <item.icon size={20} />
+              <item.icon size={17} strokeWidth={1.75} />
               <span className="flex-1">{item.label}</span>
               {item.to === '/avisos' && alertCount > 0 && (
-                <span className="rounded-full bg-berry-500 text-white text-xs px-2 py-0.5">{alertCount}</span>
+                <span className="rounded-md bg-cream-100 border border-cream-200 text-choco-700 text-[11px] font-medium px-1.5 tabular-nums">{alertCount}</span>
               )}
             </NavLink>
           ))}
@@ -108,47 +108,41 @@ export function Layout() {
       </aside>
 
       {/* Barra superior (móvil) */}
-      <header className="lg:hidden sticky top-0 z-30 bg-cream-100/90 backdrop-blur border-b border-cream-200 pt-safe no-print">
-        <div className="flex items-center gap-1 h-14 px-3">
-          <Link to="/" className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="text-2xl">🧁</span>
-            <span className="font-extrabold text-choco-900 truncate">{businessName}</span>
+      <header className="lg:hidden sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-cream-200 pt-safe no-print">
+        <div className="flex items-center gap-1 h-14 px-4">
+          <Link to="/" className="flex items-center gap-2.5 flex-1 min-w-0">
+            <Logo name={businessName} />
+            <span className="font-semibold text-[15px] text-choco-900 truncate">{businessName}</span>
           </Link>
           <HeaderButton label="Buscar" onClick={() => setSearchOpen(true)}>
-            <Search size={22} />
+            <Search size={19} strokeWidth={1.75} />
           </HeaderButton>
-          <Link to="/avisos" className="relative h-11 w-11 flex items-center justify-center rounded-full hover:bg-cream-200" aria-label="Recordatorios">
-            <Bell size={22} />
-            {alertCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 min-w-5 h-5 px-1 rounded-full bg-berry-500 text-white text-[11px] font-extrabold flex items-center justify-center">
-                {alertCount > 9 ? '9+' : alertCount}
-              </span>
-            )}
+          <Link to="/avisos" className="relative h-10 w-10 flex items-center justify-center rounded-lg text-choco-700 hover:bg-cream-100" aria-label="Recordatorios">
+            <Bell size={19} strokeWidth={1.75} />
+            {alertCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-berry-500 ring-2 ring-white" aria-label={`${alertCount} avisos`} />}
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pt-4 pb-32 lg:pb-12 lg:pt-8 lg:px-8">
+      <main className="mx-auto max-w-5xl px-4 pt-5 pb-32 lg:pb-12 lg:pt-10 lg:px-10">
         <Outlet />
       </main>
 
       {/* Navegación inferior (móvil) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-cream-200 pb-safe no-print" aria-label="Menú principal">
-        <div className="grid grid-cols-5 h-[4.25rem]">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-cream-200 pb-safe no-print" aria-label="Menú principal">
+        <div className="grid grid-cols-5 h-16">
           {MAIN.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                cx('flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition', isActive ? 'text-berry-600' : 'text-choco-500')
+                cx('flex flex-col items-center justify-center gap-1 text-[11px] transition', isActive ? 'text-choco-900 font-medium' : 'text-choco-400')
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className={cx('flex h-8 w-14 items-center justify-center rounded-full transition', isActive && 'bg-berry-50')}>
-                    <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                  </span>
+                  <item.icon size={21} strokeWidth={isActive ? 2 : 1.6} />
                   {item.label}
                 </>
               )}
@@ -156,11 +150,9 @@ export function Layout() {
           ))}
           <NavLink
             to="/mas"
-            className={cx('flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold', moreActive ? 'text-berry-600' : 'text-choco-500')}
+            className={cx('flex flex-col items-center justify-center gap-1 text-[11px]', moreActive ? 'text-choco-900 font-medium' : 'text-choco-400')}
           >
-            <span className={cx('flex h-8 w-14 items-center justify-center rounded-full', moreActive && 'bg-berry-50')}>
-              <LayoutGrid size={22} strokeWidth={moreActive ? 2.5 : 2} />
-            </span>
+            <LayoutGrid size={21} strokeWidth={moreActive ? 2 : 1.6} />
             Más
           </NavLink>
         </div>
@@ -173,8 +165,18 @@ export function Layout() {
 
 function HeaderButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" aria-label={label} onClick={onClick} className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-cream-200">
+    <button type="button" aria-label={label} onClick={onClick} className="h-10 w-10 flex items-center justify-center rounded-lg text-choco-700 hover:bg-cream-100">
       {children}
     </button>
+  );
+}
+
+/** Monograma con la inicial del negocio. */
+export function Logo({ name, className }: { name: string; className?: string }) {
+  const initial = (name.trim().replace(/^(la|el|los|las)\s+/i, '').charAt(0) || 'O').toUpperCase();
+  return (
+    <span className={cx('h-7 w-7 shrink-0 rounded-md bg-choco-900 text-white text-[13px] font-semibold flex items-center justify-center', className)} aria-hidden>
+      {initial}
+    </span>
   );
 }

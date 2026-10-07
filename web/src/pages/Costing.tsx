@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { ChevronDown, Pencil } from 'lucide-react';
+import { BookOpen, ChevronDown, Package, Pencil, Wheat } from 'lucide-react';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { money, num, pct } from '../lib/format';
@@ -131,7 +131,7 @@ export function Costing() {
                   {part.key === 'labor' && ` (${Math.round(((labor ?? p.labor_minutes) * c.servings) / (p.servings || 1))} min)`}
                   {part.key === 'overhead' && settings.overhead_percent !== undefined && ` (${settings.overhead_percent} %)`}
                 </span>
-                <span className="font-bold tabular-nums">{money(parts[part.key])}</span>
+                <span className="font-medium tabular-nums">{money(parts[part.key])}</span>
               </div>
             ))}
           </div>
@@ -140,7 +140,7 @@ export function Costing() {
 
       {permissions.catalog && (
         <Card className="p-4 space-y-4">
-          <h2 className="font-extrabold text-lg">Cambiar precio y costes</h2>
+          <h2 className="font-semibold text-base">Cambiar precio y costes</h2>
           <div className="grid grid-cols-3 gap-3">
             <Field label={p.sizes.length ? 'Precio de este tamaño' : 'Precio'}>
               <NumberInput value={price} onChange={setPrice} suffix="€" />
@@ -170,7 +170,7 @@ export function Costing() {
         title="Detalle de costes"
         action={
           permissions.catalog && (
-            <Link to={`/catalogo/${p.id}/editar`} className="text-sm font-bold text-berry-600 inline-flex items-center gap-1">
+            <Link to={`/catalogo/${p.id}/editar`} className="text-sm font-medium text-berry-600 inline-flex items-center gap-1">
               <Pencil size={14} /> Cambiar composición
             </Link>
           )
@@ -180,7 +180,7 @@ export function Costing() {
           {c.lines.map((l, i) => (
             <CostRow key={i} l={l} canEdit={permissions.inventory} onCost={(id, v) => saveItemCost.mutate({ id, cost: v })} />
           ))}
-          <div className="flex justify-between px-4 py-3 bg-cream-50 font-bold">
+          <div className="flex justify-between px-4 py-3 bg-cream-50 font-medium">
             <span>Ingredientes + materiales</span>
             <span className="tabular-nums">{money(c.ingredients + c.materials)}</span>
           </div>
@@ -196,8 +196,8 @@ export function Costing() {
 function Big({ label, value, tone }: { label: string; value: string; tone?: 'green' | 'red' | 'amber' }) {
   return (
     <div>
-      <div className="text-sm font-bold text-choco-500">{label}</div>
-      <div className={cx('text-3xl font-extrabold', tone === 'green' && 'text-emerald-700', tone === 'red' && 'text-red-600', tone === 'amber' && 'text-amber-700')}>{value}</div>
+      <div className="text-sm font-medium text-choco-500">{label}</div>
+      <div className={cx('text-3xl font-semibold', tone === 'green' && 'text-emerald-700', tone === 'red' && 'text-red-600', tone === 'amber' && 'text-amber-700')}>{value}</div>
     </div>
   );
 }
@@ -209,11 +209,11 @@ function CostRow({ l, canEdit, onCost, child }: { l: CostLine; canEdit: boolean;
     return (
       <div>
         <button type="button" className="w-full flex items-center gap-3 px-4 py-3 text-left" onClick={() => setOpen(!open)}>
-          <span>📖</span>
-          <span className="flex-1 font-bold">
+          <BookOpen size={16} className="text-choco-400 shrink-0" />
+          <span className="flex-1 font-medium">
             {l.name} <span className="text-sm text-choco-500 font-semibold">× {num(l.quantity, 2)}</span>
           </span>
-          <span className="font-bold tabular-nums">{money(l.cost)}</span>
+          <span className="font-medium tabular-nums">{money(l.cost)}</span>
           <ChevronDown size={18} className={cx('text-choco-400 transition', open && 'rotate-180')} />
         </button>
         {open && (
@@ -226,7 +226,7 @@ function CostRow({ l, canEdit, onCost, child }: { l: CostLine; canEdit: boolean;
   }
   return (
     <div className={cx('flex items-center gap-3 px-4 py-2.5', child && 'pl-10 text-[15px]')}>
-      <span>{l.type === 'material' ? '📦' : '🥚'}</span>
+      {l.type === 'material' ? <Package size={16} className="text-choco-400 shrink-0" /> : <Wheat size={16} className="text-choco-400 shrink-0" />}
       <span className="flex-1 min-w-0">
         <span className="font-semibold">{l.name}</span>
         <span className="block text-xs text-choco-500">
@@ -234,7 +234,7 @@ function CostRow({ l, canEdit, onCost, child }: { l: CostLine; canEdit: boolean;
           {edit !== null ? (
             <span className="inline-flex items-center gap-1">
               <NumberInput value={edit} onChange={(v) => setEdit(v ?? 0)} className="w-24 inline-block" />
-              <button type="button" className="font-bold text-berry-600" onClick={() => { if (l.item_id) onCost(l.item_id, edit); setEdit(null); }}>
+              <button type="button" className="font-medium text-berry-600" onClick={() => { if (l.item_id) onCost(l.item_id, edit); setEdit(null); }}>
                 Guardar
               </button>
             </span>
@@ -247,7 +247,7 @@ function CostRow({ l, canEdit, onCost, child }: { l: CostLine; canEdit: boolean;
           )}
         </span>
       </span>
-      <span className="font-bold tabular-nums">{money(l.cost)}</span>
+      <span className="font-medium tabular-nums">{money(l.cost)}</span>
     </div>
   );
 }

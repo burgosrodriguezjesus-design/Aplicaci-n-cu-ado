@@ -56,15 +56,6 @@ export const STAGE_LABELS: Record<Stage, string> = {
   empaquetar: 'Empaquetar',
   entregar: 'Entregar',
 };
-export const STAGE_EMOJI: Record<Stage, string> = {
-  preparar: '🥣',
-  hornear: '🔥',
-  rellenar: '🍫',
-  decorar: '🎨',
-  empaquetar: '📦',
-  entregar: '🚗',
-};
-
 export const PRODUCT_CATEGORIES = [
   'tartas',
   'tartas_personalizadas',
@@ -85,16 +76,6 @@ export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   cheesecakes: 'Cheesecakes',
   packs: 'Packs',
   otros: 'Otros',
-};
-export const CATEGORY_EMOJI: Record<ProductCategory, string> = {
-  tartas: '🎂',
-  tartas_personalizadas: '🎉',
-  cupcakes: '🧁',
-  galletas: '🍪',
-  brownies: '🍫',
-  cheesecakes: '🍰',
-  packs: '🎁',
-  otros: '🥐',
 };
 /** Fases de producción por defecto según la categoría (sin "entregar", que es por pedido). */
 export const DEFAULT_STAGES: Record<ProductCategory, Stage[]> = {

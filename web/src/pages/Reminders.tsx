@@ -1,39 +1,36 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Check, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Bell, Check, ChefHat, ChevronRight, CircleCheck, CircleHelp, FileText, Gift, Package, Pin, Plus, ShoppingCart, Trash2, TriangleAlert, Truck, Wallet, type LucideIcon } from 'lucide-react';
 import { api, useAction, useApi } from '../lib/api';
 import { relDay, today } from '../lib/format';
 import type { Reminder } from '../lib/types';
 import { Button, Card, cx, Empty, ErrorBox, Input, Loading, PageHeader, Section } from '../components/ui';
 
-const ICON: Record<string, string> = {
-  start: '🥣',
-  delivery: '🚗',
-  payment: '💶',
-  stock: '📦',
-  shopping: '🛒',
-  unconfirmed: '❓',
-  overdue: '🚨',
-  birthday: '🎂',
-  quote: '📝',
-  manual: '📌',
+const ICON: Record<string, LucideIcon> = {
+  start: ChefHat,
+  delivery: Truck,
+  payment: Wallet,
+  stock: Package,
+  shopping: ShoppingCart,
+  unconfirmed: CircleHelp,
+  overdue: TriangleAlert,
+  birthday: Gift,
+  quote: FileText,
+  manual: Pin,
 };
 
-const SEV_STYLE = {
-  urgent: 'border-l-red-500',
-  warning: 'border-l-amber-500',
-  info: 'border-l-sky-400',
-};
+const SEV_ICON = { urgent: 'text-red-600', warning: 'text-amber-600', info: 'text-choco-400' };
 
 export function ReminderRow({ r, onDone }: { r: Reminder; onDone?: () => void }) {
+  const Icon = ICON[r.type] ?? Bell;
   const body = (
     <>
-      <span className="text-2xl shrink-0">{ICON[r.type] ?? '🔔'}</span>
-      <span className="flex-1 font-semibold text-[15px] leading-snug">{r.text.replace(/^⚠️ /, '')}</span>
+      <Icon size={18} strokeWidth={1.75} className={cx('shrink-0', SEV_ICON[r.severity])} />
+      <span className="flex-1 text-sm leading-snug text-choco-800">{r.text.replace(/^⚠️ /, '')}</span>
     </>
   );
   return (
-    <div className={cx('flex items-center gap-3 px-4 py-3 border-l-4', SEV_STYLE[r.severity])}>
+    <div className="flex items-center gap-3 px-4 py-3">
       {r.link ? (
         <Link to={r.link} className="flex items-center gap-3 flex-1 min-w-0">
           {body}
@@ -74,7 +71,7 @@ export function Reminders() {
   return (
     <div className="space-y-6">
       <PageHeader title="Recordatorios" back="/mas" subtitle="Se generan solos a partir de pedidos, stock, cobros y clientes." />
-      {!list.length && <Empty icon="✨" title="Todo en orden" text="No hay avisos pendientes." />}
+      {!list.length && <Empty icon={CircleCheck} title="Todo en orden" text="No hay avisos pendientes." />}
       {groups.map((g) => {
         const items = list.filter((r) => r.severity === g.key);
         if (!items.length) return null;
@@ -112,9 +109,9 @@ export function Reminders() {
                     type="button"
                     aria-label={m.done ? 'Desmarcar' : 'Marcar como hecho'}
                     onClick={() => done.mutate({ id: m.id, done: !m.done })}
-                    className={cx('h-8 w-8 rounded-lg border-[3px] flex items-center justify-center shrink-0', m.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-cream-300')}
+                    className={cx('h-6 w-6 rounded-md border-[1.5px] flex items-center justify-center shrink-0', m.done ? 'bg-choco-900 border-choco-900 text-white' : 'border-cream-300')}
                   >
-                    {!!m.done && <Check size={16} strokeWidth={3} />}
+                    {!!m.done && <Check size={14} strokeWidth={2.5} />}
                   </button>
                   <span className={cx('flex-1', m.done && 'line-through text-choco-400')}>
                     {m.text}

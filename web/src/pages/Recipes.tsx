@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Clock, Flame, Plus, Users } from 'lucide-react';
+import { BookOpen, Clock, Flame, Plus, Users } from 'lucide-react';
 import { useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { money, num } from '../lib/format';
@@ -54,7 +54,7 @@ export function Recipes() {
       ) : res.error ? (
         <ErrorBox error={res.error} retry={res.refetch} />
       ) : !list.length ? (
-        <Empty icon="📖" title="No hay recetas" text="Guarda aquí tus recetas: la aplicación calculará cantidades, costes y la lista de la compra." />
+        <Empty icon={BookOpen} title="No hay recetas" text="Guarda aquí tus recetas: la aplicación calculará cantidades, costes y la lista de la compra." />
       ) : (
         <div className="space-y-6">
           {[...groups.entries()].map(([cat, rs]) => (
@@ -63,9 +63,9 @@ export function Recipes() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {rs.map((r) => (
                   <Link key={r.id} to={`/recetas/${r.id}`} className="card overflow-hidden active:scale-[0.98] transition">
-                    <Thumb photoId={r.photo_id} emoji="📖" className="h-28 w-full" rounded="rounded-none" />
+                    <Thumb photoId={r.photo_id} icon={BookOpen} className="h-28 w-full" rounded="rounded-none" />
                     <div className="p-3">
-                      <div className="font-extrabold leading-tight">{r.name}</div>
+                      <div className="font-semibold leading-tight">{r.name}</div>
                       <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-choco-500 font-semibold">
                         <span className="inline-flex items-center gap-0.5">
                           <Users size={12} /> {num(r.servings)}
@@ -81,7 +81,7 @@ export function Recipes() {
                           </span>
                         )}
                       </div>
-                      {r.cost !== null && <div className="text-sm font-bold text-choco-700 mt-1">Coste {money(r.cost)}</div>}
+                      {r.cost !== null && <div className="text-sm font-medium text-choco-700 mt-1">Coste {money(r.cost)}</div>}
                     </div>
                   </Link>
                 ))}

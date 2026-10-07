@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ChevronRight, Minus, PackagePlus, Pencil, Plus, RefreshCw, Trash2, TriangleAlert } from 'lucide-react';
+import { ChevronRight, Minus, Package, PackagePlus, Pencil, Plus, RefreshCw, Trash2, TriangleAlert, Wheat } from 'lucide-react';
 import { ALLERGEN_LABELS, ALLERGENS, UNIT_LABELS, UNITS, type Allergen, type Unit } from '@shared/constants';
 import { api, useAction, useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -60,8 +60,8 @@ export function Inventory() {
           value={kind}
           onChange={setKind}
           options={[
-            { value: 'ingredient', label: <>🥚 Ingredientes {lowCount('ingredient') > 0 && <span className="text-red-600">({lowCount('ingredient')})</span>}</> },
-            { value: 'material', label: <>📦 Materiales {lowCount('material') > 0 && <span className="text-red-600">({lowCount('material')})</span>}</> },
+            { value: 'ingredient', label: <>Ingredientes {lowCount('ingredient') > 0 && <span className="text-red-600">({lowCount('ingredient')})</span>}</> },
+            { value: 'material', label: <>Materiales {lowCount('material') > 0 && <span className="text-red-600">({lowCount('material')})</span>}</> },
           ]}
         />
         <div className="flex gap-2 items-center">
@@ -78,20 +78,20 @@ export function Inventory() {
       ) : res.error ? (
         <ErrorBox error={res.error} retry={res.refetch} />
       ) : !list.length ? (
-        <Empty icon={kind === 'ingredient' ? '🥚' : '📦'} title="Nada por aquí" text={onlyLow ? 'No hay artículos con poco stock. 👍' : 'Añade tus ingredientes y materiales para controlar el stock.'} />
+        <Empty icon={kind === 'ingredient' ? Wheat : Package} title="Nada por aquí" text={onlyLow ? 'No hay artículos con poco stock.' : 'Añade tus ingredientes y materiales para controlar el stock.'} />
       ) : (
         <Card className="divide-y divide-cream-200 overflow-hidden">
           {list.map((i) => (
             <Link key={i.id} to={`/inventario/${i.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50">
               <span className={cx('h-3 w-3 rounded-full shrink-0', i.quantity <= 0 ? 'bg-red-500' : i.low ? 'bg-amber-500' : 'bg-emerald-500')} />
               <div className="flex-1 min-w-0">
-                <div className="font-bold truncate">{i.name}</div>
+                <div className="font-medium truncate">{i.name}</div>
                 <div className="text-sm text-choco-500">
                   {i.min_stock > 0 ? `Mínimo ${qty(i.min_stock, i.unit)}` : 'Sin mínimo'}
                   {i.supplier && ` · ${i.supplier}`}
                 </div>
               </div>
-              <span className={cx('font-extrabold text-lg tabular-nums', i.low && 'text-red-600')}>{qty(i.quantity, i.unit)}</span>
+              <span className={cx('font-semibold text-base tabular-nums', i.low && 'text-red-600')}>{qty(i.quantity, i.unit)}</span>
               <ChevronRight size={18} className="text-choco-300" />
             </Link>
           ))}
@@ -140,11 +140,11 @@ export function InventoryItemPage() {
         }
       />
       <Card className={cx('p-5 text-center', i.low && 'border-red-200 bg-red-50')}>
-        <div className="text-sm font-bold text-choco-500">Hay ahora</div>
-        <div className={cx('text-5xl font-extrabold tabular-nums my-1', i.low ? 'text-red-600' : 'text-choco-900')}>{qty(i.quantity, i.unit)}</div>
+        <div className="text-sm font-medium text-choco-500">Hay ahora</div>
+        <div className={cx('text-4xl font-semibold tracking-tight tabular-nums my-1', i.low ? 'text-red-600' : 'text-choco-900')}>{qty(i.quantity, i.unit)}</div>
         {i.min_stock > 0 && <div className="text-choco-500">Mínimo: {qty(i.min_stock, i.unit)}</div>}
         {i.low && (
-          <div className="mt-2 inline-flex items-center gap-1 text-red-700 font-bold">
+          <div className="mt-2 inline-flex items-center gap-1 text-red-700 font-medium">
             <TriangleAlert size={18} /> Hay que reponer
           </div>
         )}
@@ -177,12 +177,12 @@ export function InventoryItemPage() {
             <div className="flex flex-wrap gap-2">
               {i.usage.recipes.map((r) => (
                 <Link key={`r${r.id}`} to={`/recetas/${r.id}`}>
-                  <Badge className="text-sm py-1 px-3">📖 {r.name}</Badge>
+                  <Badge className="text-sm py-1 px-2.5">{r.name}</Badge>
                 </Link>
               ))}
               {i.usage.products.map((p) => (
                 <Link key={`p${p.id}`} to={`/catalogo/${p.id}`}>
-                  <Badge tone="berry" className="text-sm py-1 px-3">🎂 {p.name}</Badge>
+                  <Badge tone="berry" className="text-sm py-1 px-2.5">{p.name}</Badge>
                 </Link>
               ))}
             </div>
@@ -208,7 +208,7 @@ export function InventoryItemPage() {
                     {relDay(m.created_at.slice(0, 10))} · {m.user_name ?? 'Automático'} {m.note ? `· ${m.note}` : ''}
                   </div>
                 </div>
-                <span className={cx('font-extrabold tabular-nums', m.quantity < 0 ? 'text-red-600' : 'text-emerald-700')}>
+                <span className={cx('font-semibold tabular-nums', m.quantity < 0 ? 'text-red-600' : 'text-emerald-700')}>
                   {m.quantity > 0 ? '+' : ''}
                   {qty(m.quantity, i.unit)}
                 </span>
@@ -363,8 +363,8 @@ export function ItemSheet({
           value={f.kind}
           onChange={(kind) => setF({ ...f, kind })}
           options={[
-            { value: 'ingredient', label: '🥚 Ingrediente' },
-            { value: 'material', label: '📦 Material' },
+            { value: 'ingredient', label: 'Ingrediente' },
+            { value: 'material', label: 'Material' },
           ]}
         />
         <Field label="Nombre">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { Calculator, Pencil, Plus, TriangleAlert } from 'lucide-react';
-import { ALLERGEN_LABELS, CATEGORY_LABELS, PRODUCT_CATEGORIES, STAGE_EMOJI, STAGE_LABELS, type Allergen } from '@shared/constants';
+import { BookOpen, CakeSlice, Calculator, Package, Pencil, Plus, TriangleAlert, Wheat } from 'lucide-react';
+import { ALLERGEN_LABELS, CATEGORY_LABELS, PRODUCT_CATEGORIES, STAGE_LABELS, type Allergen } from '@shared/constants';
 import { useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { money, num, pct } from '../lib/format';
@@ -51,7 +51,7 @@ export function Catalog() {
       ) : res.error ? (
         <ErrorBox error={res.error} retry={res.refetch} />
       ) : !list.length ? (
-        <Empty icon="🎂" title="Catálogo vacío" text="Añade tus productos con fotos, tamaños y precios." />
+        <Empty icon={CakeSlice} title="Catálogo vacío" text="Añade tus productos con fotos, tamaños y precios." />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {list.map((p) => {
@@ -60,11 +60,11 @@ export function Catalog() {
               <Link key={p.id} to={`/catalogo/${p.id}`} className={cx('card overflow-hidden active:scale-[0.98] transition', !p.active && 'opacity-50')}>
                 <Thumb photoId={p.photo_id} category={p.category} className="h-32 w-full text-lg" rounded="rounded-none" />
                 <div className="p-3">
-                  <div className="text-xs font-bold text-berry-600">{CATEGORY_LABELS[p.category]}</div>
-                  <div className="font-extrabold leading-tight">{p.name}</div>
+                  <div className="text-xs font-medium text-berry-600">{CATEGORY_LABELS[p.category]}</div>
+                  <div className="font-semibold leading-tight">{p.name}</div>
                   <div className="text-choco-700 font-semibold mt-0.5">{fromPrice(p)}</div>
                   {c && c.price > 0 && (
-                    <div className={cx('text-xs font-bold mt-1', c.margin < 0.3 ? 'text-red-600' : 'text-emerald-700')}>Margen {pct(c.margin)}</div>
+                    <div className={cx('text-xs font-medium mt-1', c.margin < 0.3 ? 'text-red-600' : 'text-emerald-700')}>Margen {pct(c.margin)}</div>
                   )}
                 </div>
               </Link>
@@ -102,7 +102,7 @@ export function ProductDetail() {
       />
       {!p.active && <Badge tone="amber">Archivado: no aparece al crear pedidos</Badge>}
       <div className="grid gap-5 lg:grid-cols-2">
-        <Thumb photoId={p.photo_id} category={p.category} className={p.photo_id ? 'w-full h-64' : 'w-full h-32 lg:h-64 text-2xl'} rounded="rounded-2xl" />
+        <Thumb photoId={p.photo_id} category={p.category} className={p.photo_id ? 'w-full h-64' : 'w-full h-32 lg:h-64 text-2xl'} rounded="rounded-xl" />
         <div className="space-y-4">
           {p.description && <p className="text-lg text-choco-700">{p.description}</p>}
           <Card className="divide-y divide-cream-200">
@@ -117,7 +117,7 @@ export function ProductDetail() {
               ))
             ) : (
               <div className="flex justify-between px-4 py-3">
-                <span className="font-bold">Precio</span>
+                <span className="font-medium">Precio</span>
                 <b>{p.pricing === 'serving' ? `${money(p.base_price)} por ración` : `${money(p.base_price)} / ${p.unit_label}`}</b>
               </div>
             )}
@@ -177,7 +177,7 @@ export function ProductDetail() {
           <div className="flex flex-wrap gap-2">
             {p.stages.map((s) => (
               <Badge key={s} className="text-sm py-1 px-3">
-                {STAGE_EMOJI[s]} {STAGE_LABELS[s]}
+                {STAGE_LABELS[s]}
               </Badge>
             ))}
           </div>
@@ -185,7 +185,7 @@ export function ProductDetail() {
             <ul className="space-y-1">
               {p.components.map((c) => (
                 <li key={c.id} className="flex gap-2">
-                  <span>{c.recipe_id ? '📖' : c.kind === 'material' ? '📦' : '🥚'}</span>
+                  <span className="text-choco-400 mt-0.5">{c.recipe_id ? <BookOpen size={15} /> : c.kind === 'material' ? <Package size={15} /> : <Wheat size={15} />}</span>
                   {c.recipe_id ? (
                     <Link to={`/recetas/${c.recipe_id}`} className="font-semibold text-berry-600">
                       {c.name}

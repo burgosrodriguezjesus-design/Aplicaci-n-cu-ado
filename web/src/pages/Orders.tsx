@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { Plus } from 'lucide-react';
+import { ClipboardList, Plus } from 'lucide-react';
 import { useApi } from '../lib/api';
 import { dateLong, relDay, today } from '../lib/format';
 import type { OrderSummary } from '../lib/types';
@@ -76,7 +76,7 @@ export function Orders() {
         <ErrorBox error={res.error} retry={res.refetch} />
       ) : !res.data?.length ? (
         <Empty
-          icon="🧾"
+          icon={ClipboardList}
           title={debounced ? 'Sin resultados' : 'No hay pedidos aquí'}
           text={debounced ? 'Prueba con otro nombre o número.' : 'Cuando entren pedidos los verás en esta lista.'}
           action={
@@ -90,11 +90,11 @@ export function Orders() {
           {groups.map(([date, list]) => (
             <section key={date} className="space-y-2">
               <h2 className="px-1 flex items-baseline gap-2">
-                <span className={date < today() && view !== 'delivered' && view !== 'all' && view !== 'cancelled' ? 'font-extrabold text-red-600' : 'font-extrabold text-choco-800'}>
+                <span className={date < today() && view !== 'delivered' && view !== 'all' && view !== 'cancelled' ? 'font-semibold text-red-600' : 'font-semibold text-choco-800'}>
                   {relDay(date)}
                 </span>
                 <span className="text-sm text-choco-500 first-letter:uppercase">{dateLong(date)}</span>
-                <span className="ml-auto text-sm text-choco-400 font-bold">{list.length}</span>
+                <span className="ml-auto text-sm text-choco-400 font-medium">{list.length}</span>
               </h2>
               <div className="grid gap-2.5 lg:grid-cols-2">
                 {list.map((o) => (
