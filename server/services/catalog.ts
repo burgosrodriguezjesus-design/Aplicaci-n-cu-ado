@@ -164,6 +164,10 @@ export class Catalog {
   allItems() {
     return [...this.items.values()];
   }
+
+  allProducts() {
+    return [...this.products.values()];
+  }
 }
 
 // ---------------------------------------------------------------------------

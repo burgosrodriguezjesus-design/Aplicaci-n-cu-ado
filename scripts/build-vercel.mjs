@@ -35,7 +35,7 @@ fs.writeFileSync(
       handler: 'index.mjs',
       launcherType: 'Nodejs',
       shouldAddHelpers: false,
-      maxDuration: 60,
+      maxDuration: 300,
       regions: ['cdg1'],
     },
     null,

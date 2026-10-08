@@ -13,6 +13,7 @@ import {
   Package,
   Search,
   Settings,
+  Sparkles,
   ShoppingCart,
   Users,
   Wallet,
@@ -31,6 +32,7 @@ const MAIN = [
 ];
 
 export const MORE = [
+  { to: '/asistente', label: 'Asistente', hint: 'Pregunta y previsiones con IA', icon: Sparkles },
   { to: '/clientes', label: 'Clientes', hint: 'Fichas, historial y cumpleaños', icon: Users },
   { to: '/recetas', label: 'Recetas', hint: 'Ingredientes y escalado', icon: BookOpen },
   { to: '/inventario', label: 'Inventario', hint: 'Stock y movimientos', icon: Package },

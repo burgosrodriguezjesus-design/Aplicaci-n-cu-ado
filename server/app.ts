@@ -9,6 +9,7 @@ import { authRouter } from './routes/auth.js';
 import { coreRouter } from './routes/core.js';
 import { ordersRouter } from './routes/orders.js';
 import { businessRouter } from './routes/business.js';
+import { assistantRouter } from './routes/assistant.js';
 
 export function createApp(opts: { webDir?: string } = {}) {
   const app = express();
@@ -37,7 +38,7 @@ export function createApp(opts: { webDir?: string } = {}) {
 
   app.use('/api', cookieParser(), express.json({ limit: '2mb' }), loadUser);
   app.use('/api/auth', authRouter);
-  app.use('/api', requireAuth, coreRouter, ordersRouter, businessRouter);
+  app.use('/api', requireAuth, coreRouter, ordersRouter, businessRouter, assistantRouter);
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'No encontrado' });
   });

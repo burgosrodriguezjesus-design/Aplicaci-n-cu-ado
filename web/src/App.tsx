@@ -23,6 +23,7 @@ import { Costing } from './pages/Costing';
 import { Quotes, QuoteDetail } from './pages/Quotes';
 import { Reminders } from './pages/Reminders';
 import { SettingsPage } from './pages/Settings';
+import { AssistantPage } from './pages/Assistant';
 
 export function App() {
   const { loading, user, permissions } = useAuth();
@@ -60,6 +61,7 @@ export function App() {
         <Route path="presupuestos/:id/editar" element={<OrderForm mode="quote" />} />
         <Route path="avisos" element={<Reminders />} />
         <Route path="ajustes" element={<SettingsPage />} />
+        <Route path="asistente" element={<AssistantPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

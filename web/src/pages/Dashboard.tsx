@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { AlertTriangle, ArrowRight, BarChart3, BookOpen, CakeSlice, CalendarCheck, Check, ChevronRight, CircleCheck, ClipboardList, Coffee, FileText, Package, Plus, Store, Truck, Wheat, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BarChart3, BookOpen, CakeSlice, CalendarCheck, Check, ChevronRight, CircleCheck, ClipboardList, Coffee, FileText, Package, Plus, Sparkles, Store, Truck, Wheat, type LucideIcon } from 'lucide-react';
 import { useApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { dateLong, greeting, money, monthLabel, relDay, untilText } from '../lib/format';
@@ -93,6 +93,15 @@ export function Dashboard() {
       <GettingStarted s={d.setup} />
 
       {d.next_delivery && <NextDelivery o={d.next_delivery} />}
+
+      <Link to="/asistente" className="card flex items-center gap-3.5 p-4 hover:shadow-[var(--shadow-lift)] hover:-translate-y-px transition group">
+        <TintIcon icon={Sparkles} tint="plum" />
+        <span className="flex-1 min-w-0">
+          <span className="block font-medium text-choco-900">Pregúntale al asistente</span>
+          <span className="block text-[13px] text-choco-500 truncate">«¿Qué me va a faltar esta semana?» · «¿Qué producto me deja menos?»</span>
+        </span>
+        <ChevronRight size={16} className="text-choco-400 group-hover:text-berry-500 transition" />
+      </Link>
 
       {d.money && <MonthCard m={d.money} />}
 

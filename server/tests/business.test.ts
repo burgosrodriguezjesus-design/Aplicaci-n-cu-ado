@@ -412,3 +412,60 @@ describe('quitar los datos de ejemplo (migración 3)', () => {
     expect(before).toBeGreaterThan(0);
   });
 });
+
+describe('asistente: análisis y herramientas', () => {
+  it('prevé ingredientes, detecta productos poco rentables y planifica la producción', async () => {
+    const { admin } = await freshApp({ demo: true });
+    const f = (await admin.get('/api/assistant/forecast?days=14').expect(200)).body;
+    expect(f.items.length).toBeGreaterThan(0);
+    expect(f.items.some((i: any) => i.committed > 0)).toBe(true);
+    for (const i of f.items) expect(['falta', 'justo', 'ok']).toContain(i.status);
+
+    const p = (await admin.get('/api/assistant/profitability').expect(200)).body;
+    expect(p.products.length).toBeGreaterThan(0);
+    const withCost = p.products.filter((x: any) => x.has_costing);
+    expect(withCost.length).toBeGreaterThan(0);
+    // ordenados de menor a mayor margen
+    for (let k = 1; k < withCost.length; k++) expect(withCost[k].margin).toBeGreaterThanOrEqual(withCost[k - 1].margin);
+
+    const plan = (await admin.get('/api/assistant/plan?days=5').expect(200)).body;
+    expect(plan.plan).toHaveLength(5);
+    expect(plan.plan[0].date).toBe('2026-10-07');
+    expect(plan.plan.some((d: any) => d.orders.length > 0)).toBe(true);
+    expect(plan.total_minutes).toBeGreaterThan(0);
+
+    // Sin clave de IA el chat avisa en vez de fallar
+    const status = (await admin.get('/api/assistant/status').expect(200)).body;
+    if (!process.env.ANTHROPIC_API_KEY) {
+      expect(status.ai).toBe(false);
+      await admin.post('/api/assistant/chat').send({ question: 'hola' }).expect(503);
+    }
+  });
+
+  it('las herramientas del chat devuelven datos reales de la pastelería', async () => {
+    await freshApp({ demo: true });
+    const { TOOLS } = await import('../services/assistant.js');
+    const { withTenant } = await import('../db/db.js');
+    const { inTenant } = await import('../http.js');
+    const t = (await get<{ id: number; schema: string; version: number }>('SELECT id, schema, version FROM public.tenants ORDER BY id DESC LIMIT 1'))!;
+    const run = (name: string, input: any) => inTenant(t, () => TOOLS[name].run(TOOLS[name].schema.parse(input))) as Promise<any>;
+    void withTenant;
+    const resumen = await run('resumen_negocio', {});
+    expect(resumen.pedidos_hoy).toBe(2);
+    const pedidos = await run('buscar_pedidos', { cliente: 'marta' });
+    expect(pedidos.pedidos.every((o: any) => o.cliente === 'Marta García')).toBe(true);
+    expect((await run('buscar_pedidos', { solo_pendientes_de_cobro: true })).pedidos.every((o: any) => o.pendiente > 0)).toBe(true);
+    const ventas = await run('ventas', { desde: '2026-01-01', hasta: '2026-10-07', agrupar_por: 'producto' });
+    expect(ventas.filas.length).toBeGreaterThan(0);
+    expect(ventas.facturado_total).toBeGreaterThan(0);
+    for (const g of ['categoria', 'cliente', 'mes', 'dia']) await run('ventas', { desde: '2026-09-01', hasta: '2026-10-07', agrupar_por: g });
+    expect((await run('gastos', { desde: '2026-10-01', hasta: '2026-10-31' })).total).toBeGreaterThan(0);
+    expect((await run('inventario', { buscar: 'huevo' })).articulos[0].nombre).toBe('Huevos');
+    expect((await run('clientes', { ordenar_por: 'gasto', limite: 3 })).clientes).toHaveLength(3);
+    expect((await run('recetas', { buscar: 'bizcocho' })).recetas.length).toBeGreaterThan(0);
+    await run('prevision_ingredientes', { dias: 7 });
+    await run('rentabilidad_productos', {});
+    await run('plan_produccion', { dias: 3 });
+    expect(() => TOOLS.ventas.schema.parse({ desde: 'ayer', hasta: '2026-01-01' })).toThrow();
+  });
+});

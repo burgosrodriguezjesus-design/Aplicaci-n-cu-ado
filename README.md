@@ -31,6 +31,7 @@ datos se guardan en una base de datos en tu propio servidor.
 | **Presupuestos** | Se hacen como un pedido, se envían por WhatsApp o se imprimen, y con **un botón** se convierten en pedido |
 | **Finanzas** | Ingresos − gastos = beneficio del mes, cobros por forma de pago, gastos por tipo, lo más vendido, evolución de 12 meses, ventas sueltas de mostrador y exportación a Excel |
 | **Recordatorios** | Pedidos que hay que empezar, entregas próximas con lo que falta («Pedido de Marta mañana a las 17:00. Falta: decorar, empaquetar.»), cobros pendientes, stock bajo, compras necesarias, pedidos sin confirmar, presupuestos que caducan y cumpleaños de clientes |
+| **Asistente** | Preguntas en lenguaje normal sobre tus datos («¿cuánto he facturado este mes?», «¿qué me falta para el jueves?») con IA (Claude, de Anthropic), que consulta los datos reales con herramientas de solo lectura. Además, sin IA: previsión de ingredientes (pedidos apuntados + consumo medio de 8 semanas, cuántos días dura cada cosa y qué comprar), rentabilidad por producto y tamaño (margen, precio recomendado, avisos) y plan de producción por días (carga de trabajo, recetas que se pueden hacer juntas y faltas de ingredientes) |
 | **Buscador** | Por nombre, teléfono, número de pedido (#12), producto o fecha (12/10) |
 
 ### Automatizaciones
@@ -82,6 +83,8 @@ Variables de entorno en Vercel:
 |---|---|
 | `DATABASE_URL` | Conexión a Postgres (pooler de Supabase en modo transacción, puerto 6543) |
 | `CRON_SECRET` | Protege la tarea diaria |
+| `ANTHROPIC_API_KEY` | Activa las preguntas con IA del asistente (opcional; sin ella, el resto funciona igual) |
+| `ASSISTANT_DAILY_LIMIT` | Máximo de preguntas a la IA por pastelería y día (por defecto 60) |
 
 > Supabase (plan gratuito) pausa los proyectos que pasan una semana sin ningún uso. Con el uso diario
 > y la tarea nocturna no debería ocurrir; si alguna vez pasa, se reactiva desde el panel de Supabase.

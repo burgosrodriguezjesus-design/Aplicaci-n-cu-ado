@@ -5,6 +5,7 @@ import { MORE } from '../components/Layout';
 import { PageHeader, TintIcon, type Tint } from '../components/ui';
 
 const TINT: Record<string, Tint> = {
+  '/asistente': 'plum',
   '/clientes': 'sky',
   '/recetas': 'caramel',
   '/inventario': 'cocoa',
