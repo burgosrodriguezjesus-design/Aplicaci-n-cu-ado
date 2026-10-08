@@ -74,7 +74,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
               <div className="card divide-y divide-cream-200">
                 {r.customers.map((c) => (
                   <Link key={c.id} to={`/clientes/${c.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-50">
-                    <div className="h-10 w-10 rounded-full bg-cream-100 border border-cream-200 text-choco-700 font-medium flex items-center justify-center">{c.name.charAt(0)}</div>
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-berry-100 to-caramel-100 ring-1 ring-inset ring-berry-100 text-berry-700 font-display text-[18px] flex items-center justify-center">{c.name.charAt(0)}</div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{c.name}</div>
                       <div className="text-sm text-choco-500">{c.phone ?? 'Sin teléfono'} · {c.orders_count} pedidos</div>

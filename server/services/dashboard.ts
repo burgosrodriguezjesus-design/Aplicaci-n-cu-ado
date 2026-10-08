@@ -4,7 +4,7 @@ import { addDays, diffDays, monthRange, nowLocal, startOfWeek, today } from '../
 import { eur, round2 } from '../lib/util.js';
 import { listOrders, prodDateSql, PAID_SQL } from './orders.js';
 import { getShoppingList, lowStockItems } from './inventory.js';
-import { expensesBetween, pendingToCollect, revenueBetween } from './finance.js';
+import { expensesBetween, history, pendingToCollect, revenueBetween } from './finance.js';
 import { STAGE_LABELS, type Stage } from '../../shared/constants.js';
 
 const OPEN = `o.status NOT IN ('entregado','cancelado')`;
@@ -72,13 +72,20 @@ export async function getDashboard(opts: { finances: boolean }) {
   let money = null;
   if (opts.finances) {
     const { from, to } = monthRange(t.slice(0, 7));
-    const [revenue, expenses, pending] = await Promise.all([revenueBetween(from, to), expensesBetween(from, to), pendingToCollect()]);
+    const [revenue, expenses, pending, months] = await Promise.all([
+      revenueBetween(from, to),
+      expensesBetween(from, to),
+      pendingToCollect(),
+      history(6, t.slice(0, 7)),
+    ]);
     money = {
       revenue: revenue.total,
       pending: pending.total,
       pending_orders: pending.orders,
       expenses,
       profit: round2(revenue.total - expenses),
+      // Facturado de los últimos 6 meses (para la gráfica del inicio)
+      history: months.map((m) => ({ month: m.month, revenue: m.revenue })),
     };
   }
 
@@ -99,6 +106,11 @@ export async function getDashboard(opts: { finances: boolean }) {
     money,
     low_stock: low,
     reminders: (await getReminders()).slice(0, 5),
+    // Para la guía de primeros pasos de una pastelería nueva
+    setup: (await get<{ products: number; recipes: number; items: number; orders: number }>(
+      `SELECT (SELECT COUNT(*) FROM products) AS products, (SELECT COUNT(*) FROM recipes) AS recipes,
+              (SELECT COUNT(*) FROM inventory_items) AS items, (SELECT COUNT(*) FROM orders) AS orders`,
+    ))!,
   };
 }
 

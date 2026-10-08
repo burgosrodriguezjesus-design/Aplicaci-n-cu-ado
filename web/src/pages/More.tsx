@@ -1,8 +1,20 @@
 import { Link } from 'react-router';
-import { ChevronRight } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { MORE } from '../components/Layout';
-import { PageHeader } from '../components/ui';
+import { PageHeader, TintIcon, type Tint } from '../components/ui';
+
+const TINT: Record<string, Tint> = {
+  '/clientes': 'sky',
+  '/recetas': 'caramel',
+  '/inventario': 'cocoa',
+  '/compras': 'sage',
+  '/finanzas': 'rose',
+  '/catalogo': 'rose',
+  '/presupuestos': 'plum',
+  '/avisos': 'caramel',
+  '/ajustes': 'cocoa',
+};
 
 export function More() {
   const { permissions, businessName } = useAuth();
@@ -10,17 +22,19 @@ export function More() {
   return (
     <div className="space-y-5">
       <PageHeader title="Más" subtitle={businessName} />
-      <div className="card divide-y divide-cream-200 overflow-hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {items.map((m) => (
-          <Link key={m.to} to={m.to} className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-cream-50 transition">
-            <span className="h-9 w-9 shrink-0 rounded-lg border border-cream-200 bg-cream-50 flex items-center justify-center text-choco-700">
-              <m.icon size={18} strokeWidth={1.75} />
+          <Link
+            key={m.to}
+            to={m.to}
+            className="card group relative p-4 flex flex-col gap-3 hover:shadow-[var(--shadow-lift)] hover:-translate-y-0.5 transition"
+          >
+            <TintIcon icon={m.icon} tint={TINT[m.to] ?? 'cocoa'} />
+            <span>
+              <span className="block font-display text-[18px] leading-tight text-choco-900">{m.label}</span>
+              <span className="block text-[12px] text-choco-500 mt-0.5 line-clamp-2">{m.hint}</span>
             </span>
-            <span className="flex-1 min-w-0">
-              <span className="block font-medium text-choco-900">{m.label}</span>
-              <span className="block text-[13px] text-choco-500 truncate">{m.hint}</span>
-            </span>
-            <ChevronRight size={16} className="text-choco-400" />
+            <ArrowUpRight size={16} className="absolute top-4 right-4 text-choco-300 group-hover:text-berry-500 transition" />
           </Link>
         ))}
       </div>

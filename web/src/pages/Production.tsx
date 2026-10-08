@@ -119,11 +119,11 @@ function ProductionBody({
   return (
     <>
       {data.unconfirmed.length > 0 && (
-        <div className="rounded-xl bg-sky-50 border border-sky-200 p-4">
-          <div className="font-semibold text-sky-800 mb-1">Pedidos sin confirmar para estos días</div>
+        <div className="rounded-2xl bg-plum-50 ring-1 ring-inset ring-plum-100 p-4">
+          <div className="text-[13px] font-semibold text-plum-700 mb-1.5">Pedidos sin confirmar para estos días</div>
           <div className="space-y-1">
             {data.unconfirmed.map((o) => (
-              <Link key={o.id} to={`/pedidos/${o.id}`} className="flex items-center gap-2 text-sky-900 font-semibold">
+              <Link key={o.id} to={`/pedidos/${o.id}`} className="flex items-center gap-2 text-choco-900 font-medium py-0.5 hover:text-plum-700">
                 <span className="flex-1">
                   #{o.number} {o.customer_name} · {relDay(o.delivery_date)} {o.delivery_time ?? ''}
                 </span>
@@ -136,7 +136,7 @@ function ProductionBody({
 
       {data.summary.length > 0 && (
         <Card className="p-4">
-          <div className="text-[13px] font-medium text-choco-500 mb-3 first-letter:uppercase">{label.toLowerCase()} hay que preparar</div>
+          <div className="font-display text-[19px] text-choco-900 mb-3 first-letter:uppercase">{label.toLowerCase()} hay que preparar</div>
           <ul className="space-y-1.5">
             {data.summary.map((s, i) => {
               const done = s.done_quantity >= s.quantity;

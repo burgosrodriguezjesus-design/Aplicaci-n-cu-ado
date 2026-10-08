@@ -107,8 +107,8 @@ export function Finance() {
       <Card className="p-5">
         <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
-            <div className="font-medium text-choco-500">Beneficio estimado</div>
-            <div className={cx('text-4xl font-semibold tracking-tight leading-tight tabular-nums', s.profit >= 0 ? 'text-emerald-700' : 'text-red-700')}>{money(s.profit)}</div>
+            <div className="text-[13px] text-choco-500">Beneficio estimado</div>
+            <div className={cx('font-display text-[44px] leading-tight tabular-nums mt-0.5', s.profit >= 0 ? 'text-sage-700' : 'text-red-700')}>{money(s.profit)}</div>
           </div>
           <div className="text-[15px] space-y-1 sm:min-w-64">
             <Line label="Ingresos (facturado)" value={money(s.revenue.total)} />
@@ -172,15 +172,15 @@ export function Finance() {
                 <div className="font-semibold">Ingresos y gastos</div>
                 <Legend
                   items={[
-                    { name: 'Ingresos', color: SERIES.blue },
-                    { name: 'Gastos', color: SERIES.orange },
+                    { name: 'Ingresos', color: SERIES.revenue },
+                    { name: 'Gastos', color: SERIES.expenses },
                   ]}
                 />
                 <ColumnChart
                   data={chartData}
                   series={[
-                    { name: 'Ingresos', color: SERIES.blue },
-                    { name: 'Gastos', color: SERIES.orange },
+                    { name: 'Ingresos', color: SERIES.revenue },
+                    { name: 'Gastos', color: SERIES.expenses },
                   ]}
                   extra={(d) => {
                     const p = d.values[0] - d.values[1];
@@ -192,8 +192,8 @@ export function Finance() {
                 <div className="font-semibold">Beneficio por mes</div>
                 <ColumnChart
                   data={chartData.map((d) => ({ ...d, values: [d.profit] }))}
-                  series={[{ name: 'Beneficio', color: SERIES.blue }]}
-                  colorFor={(v) => (v >= 0 ? SERIES.blue : SERIES.red)}
+                  series={[{ name: 'Beneficio', color: SERIES.profit }]}
+                  colorFor={(v) => (v >= 0 ? SERIES.profit : SERIES.loss)}
                   height={170}
                 />
               </div>
@@ -206,7 +206,7 @@ export function Finance() {
         <Section title="Gastos por tipo">
           <Card className="p-4">
             {s.expenses_by_category.length ? (
-              <HBars rows={s.expenses_by_category.map((e) => ({ label: EXPENSE_CATEGORY_LABELS[e.category] ?? e.category, value: e.amount }))} color={SERIES.orange} />
+              <HBars rows={s.expenses_by_category.map((e) => ({ label: EXPENSE_CATEGORY_LABELS[e.category] ?? e.category, value: e.amount }))} color={SERIES.expenses} />
             ) : (
               <p className="text-choco-500">Sin gastos este mes.</p>
             )}
@@ -321,8 +321,8 @@ function Line({ label, value }: { label: React.ReactNode; value: React.ReactNode
 function Tile({ label, value, sub, warn }: { label: string; value: string; sub?: string; warn?: boolean }) {
   return (
     <div className="card p-4 h-full">
-      <div className="text-sm font-medium text-choco-500">{label}</div>
-      <div className={cx('text-2xl font-semibold mt-0.5', warn && 'text-amber-700')}>{value}</div>
+      <div className="text-[13px] text-choco-500">{label}</div>
+      <div className={cx('font-display text-[27px] leading-tight mt-1 tabular-nums', warn ? 'text-caramel-700' : 'text-choco-900')}>{value}</div>
       {sub && <div className="text-xs text-choco-500 mt-0.5">{sub}</div>}
     </div>
   );

@@ -72,89 +72,106 @@ export function Layout() {
   return (
     <div className="min-h-dvh lg:pl-64">
       {/* Barra lateral (ordenador) */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col bg-white border-r border-cream-200 z-30">
-        <Link to="/" className="flex items-center gap-2.5 px-4 h-14 border-b border-cream-200">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col hero text-cream-100 z-30">
+        <div className="absolute inset-0 hero-dots pointer-events-none" />
+        <Link to="/" className="relative flex items-center gap-3 px-5 h-20">
           <Logo name={businessName} />
-          <span className="font-semibold text-[15px] text-choco-900 truncate">{businessName}</span>
+          <span className="min-w-0">
+            <span className="block font-display text-[17px] font-medium text-white truncate leading-tight">{businessName}</span>
+            <span className="block text-[11px] uppercase tracking-[0.14em] text-cream-100/50">Obrador</span>
+          </span>
         </Link>
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          className="mx-3 mt-3 flex items-center gap-2 rounded-lg border border-cream-200 bg-cream-50 px-2.5 h-9 text-choco-400 hover:border-cream-300 text-[13px]"
+          className="relative mx-4 flex items-center gap-2 rounded-xl glass px-3 h-10 text-cream-100/60 hover:text-white text-[13px] transition"
         >
-          <Search size={15} /> Buscar… <kbd className="ml-auto text-[11px] font-sans border border-cream-200 bg-white rounded px-1.5">Ctrl K</kbd>
+          <Search size={15} /> Buscar… <kbd className="ml-auto text-[10px] font-sans rounded-md border border-white/15 px-1.5 py-0.5">Ctrl K</kbd>
         </button>
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-px">
-          {[...MAIN, ...visibleMore].map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={'end' in item ? item.end : false}
-              className={({ isActive }) =>
-                cx(
-                  'flex items-center gap-2.5 rounded-md px-2.5 h-9 text-sm transition',
-                  isActive ? 'bg-cream-100 text-choco-900 font-medium' : 'text-choco-500 hover:bg-cream-50 hover:text-choco-900',
-                )
-              }
-            >
-              <item.icon size={17} strokeWidth={1.75} />
-              <span className="flex-1">{item.label}</span>
-              {item.to === '/avisos' && alertCount > 0 && (
-                <span className="rounded-md bg-cream-100 border border-cream-200 text-choco-700 text-[11px] font-medium px-1.5 tabular-nums">{alertCount}</span>
-              )}
-            </NavLink>
+        <nav className="relative flex-1 overflow-y-auto px-3 py-5 space-y-0.5">
+          {[...MAIN, ...visibleMore].map((item, i) => (
+            <div key={item.to}>
+              {i === MAIN.length && <div className="mx-3 my-3 border-t border-white/10" />}
+              <NavLink
+                to={item.to}
+                end={'end' in item ? item.end : false}
+                className={({ isActive }) =>
+                  cx(
+                    'relative flex items-center gap-3 rounded-xl px-3 h-10 text-sm transition',
+                    isActive ? 'bg-white/[0.12] text-white font-medium shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]' : 'text-cream-100/65 hover:bg-white/[0.06] hover:text-white',
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && <span className="absolute -left-3 top-2 bottom-2 w-1 rounded-r-full bg-berry-200" />}
+                    <item.icon size={18} strokeWidth={1.75} />
+                    <span className="flex-1">{item.label}</span>
+                    {item.to === '/avisos' && alertCount > 0 && (
+                      <span className="rounded-full bg-berry-500 text-white text-[11px] font-semibold px-2 py-0.5 tabular-nums">{alertCount}</span>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            </div>
           ))}
         </nav>
       </aside>
 
       {/* Barra superior (móvil) */}
-      <header className="lg:hidden sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-cream-200 pt-safe no-print">
+      <header className="lg:hidden sticky top-0 z-30 bg-cream-100/85 backdrop-blur-md border-b border-cream-200/70 pt-safe no-print">
         <div className="flex items-center gap-1 h-14 px-4">
           <Link to="/" className="flex items-center gap-2.5 flex-1 min-w-0">
             <Logo name={businessName} />
-            <span className="font-semibold text-[15px] text-choco-900 truncate">{businessName}</span>
+            <span className="font-display text-[18px] font-medium text-choco-900 truncate">{businessName}</span>
           </Link>
           <HeaderButton label="Buscar" onClick={() => setSearchOpen(true)}>
             <Search size={19} strokeWidth={1.75} />
           </HeaderButton>
-          <Link to="/avisos" className="relative h-10 w-10 flex items-center justify-center rounded-lg text-choco-700 hover:bg-cream-100" aria-label="Recordatorios">
+          <Link to="/avisos" className="relative h-10 w-10 flex items-center justify-center rounded-xl text-choco-700 hover:bg-cream-200/70" aria-label="Recordatorios">
             <Bell size={19} strokeWidth={1.75} />
-            {alertCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-berry-500 ring-2 ring-white" aria-label={`${alertCount} avisos`} />}
+            {alertCount > 0 && (
+              <span className="absolute top-1 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-berry-500 text-white text-[10px] font-semibold flex items-center justify-center ring-2 ring-cream-100 tabular-nums">
+                {alertCount > 9 ? '9+' : alertCount}
+              </span>
+            )}
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pt-5 pb-32 lg:pb-12 lg:pt-10 lg:px-10">
+      <main className="mx-auto max-w-5xl px-4 pt-5 pb-36 lg:pb-14 lg:pt-10 lg:px-10">
         <Outlet />
       </main>
 
-      {/* Navegación inferior (móvil) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-cream-200 pb-safe no-print" aria-label="Menú principal">
-        <div className="grid grid-cols-5 h-16">
-          {MAIN.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                cx('flex flex-col items-center justify-center gap-1 text-[11px] transition', isActive ? 'text-choco-900 font-medium' : 'text-choco-400')
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <item.icon size={21} strokeWidth={isActive ? 2 : 1.6} />
-                  {item.label}
-                </>
-              )}
-            </NavLink>
-          ))}
-          <NavLink
-            to="/mas"
-            className={cx('flex flex-col items-center justify-center gap-1 text-[11px]', moreActive ? 'text-choco-900 font-medium' : 'text-choco-400')}
-          >
-            <LayoutGrid size={21} strokeWidth={moreActive ? 2 : 1.6} />
-            Más
-          </NavLink>
+      {/* Navegación inferior flotante (móvil) */}
+      <nav
+        className="lg:hidden fixed inset-x-3 bottom-[calc(0.625rem+env(safe-area-inset-bottom))] z-40 rounded-[22px] bg-white/90 backdrop-blur-xl border border-cream-200/80 shadow-[0_12px_32px_-12px_rgb(42_29_24/0.35)] no-print"
+        aria-label="Menú principal"
+      >
+        <div className="grid grid-cols-5 h-16 px-1">
+          {[...MAIN, { to: '/mas', label: 'Más', icon: LayoutGrid, end: false }].map((item) => {
+            const more = item.to === '/mas';
+            return (
+              <NavLink key={item.to} to={item.to} end={item.end} className="flex items-center justify-center">
+                {({ isActive }) => {
+                  const on = more ? moreActive : isActive;
+                  return (
+                    <span className={cx('flex flex-col items-center gap-1 text-[10.5px] transition', on ? 'text-choco-900 font-semibold' : 'text-choco-400')}>
+                      <span
+                        className={cx(
+                          'flex h-8 w-12 items-center justify-center rounded-full transition',
+                          on && 'bg-choco-900 text-white shadow-[0_4px_12px_-4px_rgb(42_29_24/0.6)]',
+                        )}
+                      >
+                        <item.icon size={19} strokeWidth={on ? 2 : 1.7} />
+                      </span>
+                      {item.label}
+                    </span>
+                  );
+                }}
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
 
@@ -165,17 +182,23 @@ export function Layout() {
 
 function HeaderButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" aria-label={label} onClick={onClick} className="h-10 w-10 flex items-center justify-center rounded-lg text-choco-700 hover:bg-cream-100">
+    <button type="button" aria-label={label} onClick={onClick} className="h-10 w-10 flex items-center justify-center rounded-xl text-choco-700 hover:bg-cream-200/70">
       {children}
     </button>
   );
 }
 
-/** Monograma con la inicial del negocio. */
+/** Monograma con la inicial del negocio, en serif sobre palo de rosa. */
 export function Logo({ name, className }: { name: string; className?: string }) {
   const initial = (name.trim().replace(/^(la|el|los|las)\s+/i, '').charAt(0) || 'O').toUpperCase();
   return (
-    <span className={cx('h-7 w-7 shrink-0 rounded-md bg-choco-900 text-white text-[13px] font-semibold flex items-center justify-center', className)} aria-hidden>
+    <span
+      className={cx(
+        'h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-berry-500 to-berry-700 text-white font-display text-[19px] font-medium flex items-center justify-center shadow-[0_1px_0_rgb(255_255_255/0.2)_inset,0_6px_14px_-6px_rgb(126_41_65/0.8)]',
+        className,
+      )}
+      aria-hidden
+    >
       {initial}
     </span>
   );

@@ -86,7 +86,7 @@ export function CalendarPage() {
             <ChevronLeft size={26} />
           </IconButton>
           <div className="flex-1 text-center">
-            <div className="font-semibold text-base first-letter:uppercase">{title}</div>
+            <div className="font-display text-[20px] text-choco-900 first-letter:uppercase">{title}</div>
             {view === 'dia' && <div className="text-sm text-choco-500 first-letter:uppercase">{dateLong(date)}</div>}
           </div>
           <IconButton label="Siguiente" onClick={() => move(1)}>

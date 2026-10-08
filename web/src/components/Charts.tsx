@@ -2,15 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { money } from '../lib/format';
 import { cx } from './ui';
 
-// Colores de gráfica validados (contraste y daltonismo) sobre fondo blanco.
-export const SERIES = { blue: '#2a78d6', orange: '#eb6834', red: '#e34948' };
-const GRID = '#ece4da';
-const AXIS = '#d9cbbb';
-const MUTED = '#8a7265';
+// Colores de gráfica de la marca, validados (contraste 3:1 y daltonismo) sobre fondo blanco:
+// ingresos (palo de rosa) frente a gastos (caramelo); beneficio verde y pérdidas en rojo
+// (además se distinguen por quedar por encima o por debajo de cero).
+export const SERIES = { revenue: '#b4405f', expenses: '#c27a1f', profit: '#3d8a5c', loss: '#d64545' };
+const GRID = '#f1ebe3';
+const AXIS = '#ddd0bf';
+const MUTED = '#8a7668';
 
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
-  const [w, setW] = useState(600);
+  const [w, setW] = useState(300);
   useEffect(() => {
     if (!ref.current) return;
     const ro = new ResizeObserver(([e]) => setW(Math.max(260, Math.round(e.contentRect.width))));
@@ -65,7 +67,7 @@ export function ColumnChart({
 }: {
   data: ColumnDatum[];
   series: { name: string; color: string }[];
-  colorFor?: (value: number, seriesIndex: number) => string;
+  colorFor?: (value: number, seriesIndex: number, groupIndex: number) => string;
   height?: number;
   extra?: (d: ColumnDatum) => React.ReactNode;
 }) {
@@ -89,7 +91,7 @@ export function ColumnChart({
   const showEvery = band < 34 ? 2 : 1;
 
   return (
-    <div ref={ref} className="relative select-none">
+    <div ref={ref} className="relative select-none w-full min-w-0 overflow-hidden">
       <svg width={width} height={height} role="img" aria-label={series.map((s) => s.name).join(' y ')} className="block overflow-visible">
         {ticks.map((t) => (
           <g key={t}>
@@ -107,12 +109,12 @@ export function ColumnChart({
                 <path
                   key={s}
                   d={barPath(gx + s * (barW + gap), barW, y(0), y(v))}
-                  fill={colorFor ? colorFor(v, s) : series[s].color}
+                  fill={colorFor ? colorFor(v, s, i) : series[s].color}
                   opacity={hover === null || hover === i ? 1 : 0.45}
                 />
               ))}
               {i % showEvery === 0 && (
-                <text x={padL + i * band + band / 2} y={height - 8} textAnchor="middle" fontSize={11} fill={MUTED} fontWeight={hover === i ? 800 : 600}>
+                <text x={padL + i * band + band / 2} y={height - 8} textAnchor="middle" fontSize={11} fill={hover === i ? '#2a1d18' : MUTED} fontWeight={hover === i ? 600 : 500}>
                   {d.label}
                 </text>
               )}
@@ -137,7 +139,7 @@ export function ColumnChart({
       </svg>
       {hover !== null && data[hover] && (
         <div
-          className="pointer-events-none absolute top-0 z-10 rounded-xl bg-white shadow-lg border border-cream-200 px-3 py-2 text-sm min-w-40"
+          className="pointer-events-none absolute top-0 z-10 rounded-xl bg-white shadow-[var(--shadow-lift)] border border-cream-200 px-3 py-2 text-sm min-w-40"
           style={{
             left: Math.min(Math.max(padL + hover * band + band / 2 - 80, 0), width - 170),
           }}
@@ -145,7 +147,7 @@ export function ColumnChart({
           <div className="font-medium text-choco-500 mb-1 first-letter:uppercase">{data[hover].long}</div>
           {series.map((s, k) => (
             <div key={s.name} className="flex items-center gap-2">
-              <span className="h-0.5 w-3 rounded" style={{ background: colorFor ? colorFor(data[hover].values[k], k) : s.color }} />
+              <span className="h-0.5 w-3 rounded" style={{ background: colorFor ? colorFor(data[hover].values[k], k, hover) : s.color }} />
               <span className="font-semibold text-choco-900 tabular-nums">{money(data[hover].values[k])}</span>
               <span className="text-choco-500">{s.name}</span>
             </div>
@@ -170,7 +172,7 @@ export function Legend({ items }: { items: { name: string; color: string }[] }) 
 }
 
 /** Barras horizontales ordenadas (una sola serie: sin leyenda, valor en la punta). */
-export function HBars({ rows, color = SERIES.blue, format = money }: { rows: { label: string; value: number }[]; color?: string; format?: (n: number) => string }) {
+export function HBars({ rows, color = SERIES.revenue, format = money }: { rows: { label: string; value: number }[]; color?: string; format?: (n: number) => string }) {
   const max = Math.max(...rows.map((r) => r.value), 1);
   return (
     <div className="space-y-2.5">

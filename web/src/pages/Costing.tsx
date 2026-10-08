@@ -39,11 +39,11 @@ interface Breakdown {
 
 // Partes del coste (barra apilada): colores categóricos en orden fijo, validados para daltonismo; siempre con leyenda e importes.
 const PARTS = [
-  { key: 'ingredients', label: 'Ingredientes', color: '#2a78d6' },
-  { key: 'materials', label: 'Envases y materiales', color: '#eb6834' },
-  { key: 'labor', label: 'Mano de obra', color: '#1baf7a' },
-  { key: 'other', label: 'Otros costes', color: '#eda100' },
-  { key: 'overhead', label: 'Gastos generales', color: '#e87ba4' },
+  { key: 'ingredients', label: 'Ingredientes', color: '#b4405f' },
+  { key: 'materials', label: 'Envases y materiales', color: '#c27a1f' },
+  { key: 'labor', label: 'Mano de obra', color: '#7d5ba6' },
+  { key: 'other', label: 'Otros costes', color: '#3d8a5c' },
+  { key: 'overhead', label: 'Gastos generales', color: '#2f74b5' },
 ] as const;
 
 export function Costing() {
@@ -140,7 +140,7 @@ export function Costing() {
 
       {permissions.catalog && (
         <Card className="p-4 space-y-4">
-          <h2 className="font-semibold text-base">Cambiar precio y costes</h2>
+          <h2 className="font-display text-[19px] text-choco-900">Cambiar precio y costes</h2>
           <div className="grid grid-cols-3 gap-3">
             <Field label={p.sizes.length ? 'Precio de este tamaño' : 'Precio'}>
               <NumberInput value={price} onChange={setPrice} suffix="€" />
@@ -152,7 +152,7 @@ export function Costing() {
               <NumberInput value={other} onChange={setOther} suffix="€" />
             </Field>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 p-3">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-sage-50 ring-1 ring-inset ring-sage-100 p-3">
             <span className="flex-1">
               Para un margen del {Math.round(target * 100)} % deberías cobrar <b className="text-emerald-700">{money(recommended)}</b>
             </span>
@@ -196,8 +196,8 @@ export function Costing() {
 function Big({ label, value, tone }: { label: string; value: string; tone?: 'green' | 'red' | 'amber' }) {
   return (
     <div>
-      <div className="text-sm font-medium text-choco-500">{label}</div>
-      <div className={cx('text-3xl font-semibold', tone === 'green' && 'text-emerald-700', tone === 'red' && 'text-red-600', tone === 'amber' && 'text-amber-700')}>{value}</div>
+      <div className="text-[13px] text-choco-500">{label}</div>
+      <div className={cx('font-display text-[32px] leading-tight tabular-nums', tone === 'green' ? 'text-sage-700' : tone === 'red' ? 'text-red-700' : tone === 'amber' ? 'text-caramel-700' : 'text-choco-900')}>{value}</div>
     </div>
   );
 }

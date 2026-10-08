@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@fontsource-variable/inter';
+import '@fontsource-variable/fraunces';
 import './styles.css';
 import { App } from './App';
 import { ToastProvider } from './components/Toast';

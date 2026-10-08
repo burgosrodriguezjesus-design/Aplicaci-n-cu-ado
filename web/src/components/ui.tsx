@@ -26,14 +26,18 @@ export function cx(...c: (string | number | false | null | undefined)[]) {
 // Botones
 // ---------------------------------------------------------------------------
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
+type Variant = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
 const variants: Record<Variant, string> = {
-  primary: 'bg-choco-900 text-white hover:bg-choco-800 active:bg-choco-700 shadow-[0_1px_2px_rgb(28_25_23/0.2)]',
-  secondary: 'bg-white text-choco-800 border border-cream-300 hover:bg-cream-50 shadow-[0_1px_2px_rgb(28_25_23/0.04)]',
-  outline: 'bg-white text-choco-800 border border-cream-300 hover:bg-cream-50 shadow-[0_1px_2px_rgb(28_25_23/0.04)]',
+  primary:
+    'bg-gradient-to-b from-choco-800 to-choco-900 text-white hover:from-choco-700 hover:to-choco-800 shadow-[0_1px_0_rgb(255_255_255/0.08)_inset,0_6px_16px_-6px_rgb(42_29_24/0.55)]',
+  accent:
+    'bg-gradient-to-b from-berry-500 to-berry-600 text-white hover:from-berry-600 hover:to-berry-700 shadow-[0_1px_0_rgb(255_255_255/0.15)_inset,0_6px_16px_-6px_rgb(156_51_80/0.6)]',
+  secondary: 'bg-white text-choco-800 border border-cream-300 hover:border-choco-400/60 hover:bg-cream-50 shadow-[0_1px_2px_rgb(42_29_24/0.04)]',
+  outline: 'bg-white text-choco-800 border border-cream-300 hover:border-choco-400/60 hover:bg-cream-50 shadow-[0_1px_2px_rgb(42_29_24/0.04)]',
   ghost: 'bg-transparent text-choco-700 hover:bg-cream-200/70',
   danger: 'bg-white text-red-700 hover:bg-red-50 border border-red-200',
-  success: 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-[0_1px_2px_rgb(28_25_23/0.2)]',
+  success:
+    'bg-gradient-to-b from-sage-500 to-sage-700 text-white shadow-[0_1px_0_rgb(255_255_255/0.15)_inset,0_6px_16px_-6px_rgb(43_98_67/0.6)]',
 };
 
 export function Button({
@@ -52,14 +56,14 @@ export function Button({
   icon?: ReactNode;
   block?: boolean;
 }) {
-  const sizes = { sm: 'h-8 px-3 text-[13px] gap-1.5', md: 'h-10 px-4 text-sm gap-2', lg: 'h-12 px-5 text-[15px] gap-2' };
+  const sizes = { sm: 'h-9 px-3.5 text-[13px] gap-1.5', md: 'h-11 px-4 text-sm gap-2', lg: 'h-12 px-5 text-[15px] gap-2' };
   return (
     <button
       type="button"
       {...rest}
       disabled={rest.disabled || loading}
       className={cx(
-        'inline-flex items-center justify-center rounded-lg font-medium transition select-none disabled:opacity-40 disabled:pointer-events-none',
+        'inline-flex items-center justify-center rounded-xl font-medium whitespace-nowrap transition active:scale-[0.98] select-none disabled:opacity-40 disabled:pointer-events-none',
         variants[variant],
         sizes[size],
         block && 'w-full',
@@ -85,7 +89,7 @@ export function IconButton({
       title={label}
       {...rest}
       className={cx(
-        'inline-flex h-10 w-10 items-center justify-center rounded-lg text-choco-700 hover:bg-cream-200/70 active:bg-cream-200 transition disabled:opacity-40',
+        'inline-flex h-10 w-10 items-center justify-center rounded-xl text-choco-700 hover:bg-cream-200/70 active:bg-cream-200 transition disabled:opacity-40',
         className,
       )}
     >
@@ -100,7 +104,7 @@ export function IconButton({
 
 export function Card({ className, children, onClick }: { className?: string; children: ReactNode; onClick?: () => void }) {
   return (
-    <div className={cx('card', onClick && 'cursor-pointer hover:border-cream-300 transition', className)} onClick={onClick}>
+    <div className={cx('card', onClick && 'cursor-pointer hover:shadow-[var(--shadow-lift)] transition', className)} onClick={onClick}>
       {children}
     </div>
   );
@@ -118,7 +122,7 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cx('space-y-3', className)}>
+    <section className={cx('min-w-0 space-y-3', className)}>
       {(title || action) && (
         <div className="flex items-center justify-between gap-2">
           {title && <h2 className="section-title">{title}</h2>}
@@ -143,7 +147,7 @@ export function PageHeader({
 }) {
   const nav = useNavigate();
   return (
-    <div className="flex items-center gap-2 mb-5">
+    <div className="flex items-center gap-2 mb-6">
       {back && (
         <IconButton
           label="Volver"
@@ -154,8 +158,8 @@ export function PageHeader({
         </IconButton>
       )}
       <div className="min-w-0 flex-1">
-        <h1 className="text-[22px] font-semibold text-choco-900 leading-tight truncate">{title}</h1>
-        {subtitle && <div className="text-sm text-choco-500 mt-0.5">{subtitle}</div>}
+        <h1 className="font-display text-[28px] font-medium text-choco-900 leading-tight truncate">{title}</h1>
+        {subtitle && <div className="text-sm text-choco-500 mt-1">{subtitle}</div>}
       </div>
       {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
     </div>
@@ -164,13 +168,13 @@ export function PageHeader({
 
 export function Empty({ icon: Icon, title, text, action }: { icon?: LucideIcon; title: string; text?: string; action?: ReactNode }) {
   return (
-    <div className="card flex flex-col items-center text-center px-6 py-10 gap-1.5">
+    <div className="card flex flex-col items-center text-center px-6 py-12 gap-1.5">
       {Icon && (
-        <div className="mb-2 h-10 w-10 rounded-lg border border-cream-200 bg-cream-50 flex items-center justify-center text-choco-500">
-          <Icon size={20} strokeWidth={1.75} />
+        <div className="mb-3 h-14 w-14 rounded-2xl bg-gradient-to-br from-berry-50 to-caramel-50 border border-berry-100 flex items-center justify-center text-berry-500">
+          <Icon size={24} strokeWidth={1.6} />
         </div>
       )}
-      <div className="font-semibold text-choco-900">{title}</div>
+      <div className="font-display text-xl font-medium text-choco-900">{title}</div>
       {text && <p className="text-sm text-choco-500 max-w-sm">{text}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
@@ -227,7 +231,7 @@ export function ProgressBar({ value, total, className }: { value: number; total:
   const pct = total ? Math.round((value / total) * 100) : 0;
   return (
     <div className={cx('h-1.5 rounded-full bg-cream-200 overflow-hidden', className)} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-      <div className={cx('h-full rounded-full transition-all', pct === 100 ? 'bg-emerald-600' : 'bg-choco-900')} style={{ width: `${pct}%` }} />
+      <div className={cx('h-full rounded-full transition-all', pct === 100 ? 'bg-sage-500' : 'bg-gradient-to-r from-berry-500 to-caramel-500')} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -250,7 +254,7 @@ export function StatusBadge({ status, long, className }: { status: OrderStatus; 
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset whitespace-nowrap',
         STATUS_STYLE[status].badge,
         className,
       )}
@@ -271,7 +275,7 @@ export function Badge({ children, tone = 'neutral', className }: { children: Rea
     blue: 'bg-sky-50 text-sky-800 ring-sky-600/20',
   };
   return (
-    <span className={cx('inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap', tones[tone], className)}>
+    <span className={cx('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap', tones[tone], className)}>
       {children}
     </span>
   );
@@ -297,23 +301,55 @@ export const CATEGORY_ICON: Record<ProductCategory, LucideIcon> = {
   otros: Package,
 };
 
-/** Icono de una fase de producción, en una cajita neutra. */
-export function StageIcon({ stage, className }: { stage: Stage; className?: string }) {
-  const Icon = STAGE_ICON[stage] ?? Package;
+/** Tonos suaves (fondo + icono) para dar color sin estridencias. */
+export const TINTS = {
+  rose: 'bg-berry-50 text-berry-700 ring-berry-100',
+  caramel: 'bg-caramel-50 text-caramel-700 ring-caramel-100/80',
+  sage: 'bg-sage-50 text-sage-700 ring-sage-100',
+  plum: 'bg-plum-50 text-plum-700 ring-plum-100',
+  sky: 'bg-sky-50 text-sky-700 ring-sky-100',
+  cocoa: 'bg-cream-100 text-choco-700 ring-cream-200',
+} as const;
+export type Tint = keyof typeof TINTS;
+
+export const STAGE_TINT: Record<Stage, Tint> = {
+  preparar: 'caramel',
+  hornear: 'rose',
+  rellenar: 'plum',
+  decorar: 'rose',
+  empaquetar: 'sage',
+  entregar: 'sky',
+};
+export const CATEGORY_TINT: Record<ProductCategory, Tint> = {
+  tartas: 'rose',
+  tartas_personalizadas: 'plum',
+  cupcakes: 'rose',
+  galletas: 'caramel',
+  brownies: 'cocoa',
+  cheesecakes: 'caramel',
+  packs: 'sage',
+  otros: 'cocoa',
+};
+
+/** Icono en una pastilla de color suave. */
+export function TintIcon({ icon: Icon, tint = 'cocoa', size = 'md', className }: { icon: LucideIcon; tint?: Tint; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+  const box = { sm: 'h-8 w-8 rounded-lg', md: 'h-10 w-10 rounded-xl', lg: 'h-12 w-12 rounded-2xl' }[size];
+  const ic = { sm: 15, md: 18, lg: 22 }[size];
   return (
-    <span className={cx('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-cream-200 bg-cream-50 text-choco-500', className)}>
-      <Icon size={16} strokeWidth={1.75} />
+    <span className={cx('inline-flex shrink-0 items-center justify-center ring-1 ring-inset', box, TINTS[tint], className)}>
+      <Icon size={ic} strokeWidth={1.75} />
     </span>
   );
 }
 
+/** Icono de una fase de producción. */
+export function StageIcon({ stage, className }: { stage: Stage; className?: string }) {
+  return <TintIcon icon={STAGE_ICON[stage] ?? Package} tint={STAGE_TINT[stage] ?? 'cocoa'} size="sm" className={className} />;
+}
+
 export function CategoryIcon({ category, className }: { category?: string | null; className?: string }) {
-  const Icon = CATEGORY_ICON[(category as ProductCategory) ?? 'otros'] ?? CakeSlice;
-  return (
-    <span className={cx('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-cream-200 bg-cream-50 text-choco-500', className)}>
-      <Icon size={16} strokeWidth={1.75} />
-    </span>
-  );
+  const c = (category as ProductCategory) ?? 'otros';
+  return <TintIcon icon={CATEGORY_ICON[c] ?? CakeSlice} tint={CATEGORY_TINT[c] ?? 'cocoa'} size="sm" className={className} />;
 }
 
 /** Foto del producto o, si no hay, un hueco neutro con el icono de su categoría. */
@@ -322,7 +358,7 @@ export function Thumb({
   category,
   icon,
   className,
-  rounded = 'rounded-lg',
+  rounded = 'rounded-xl',
 }: {
   photoId?: number | null;
   category?: ProductCategory | string | null;
@@ -333,10 +369,13 @@ export function Thumb({
   if (photoId) {
     return <img src={imageUrl(photoId)} alt="" loading="lazy" className={cx('object-cover bg-cream-200', rounded, className)} />;
   }
-  const Icon = icon ?? CATEGORY_ICON[(category as ProductCategory) ?? 'otros'] ?? CakeSlice;
+  const c = (category as ProductCategory) ?? 'otros';
+  const Icon = icon ?? CATEGORY_ICON[c] ?? CakeSlice;
+  const tint = icon ? 'rose' : (CATEGORY_TINT[c] ?? 'cocoa');
   return (
-    <div className={cx('flex items-center justify-center bg-cream-100 text-choco-400 border border-cream-200', rounded, className)} aria-hidden>
-      <Icon className="h-[40%] w-[40%] max-h-10 max-w-10" strokeWidth={1.5} />
+    <div className={cx('relative flex items-center justify-center overflow-hidden ring-1 ring-inset', TINTS[tint], rounded, className)} aria-hidden>
+      <div className="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_30%_20%,white_0%,transparent_60%)]" />
+      <Icon className="relative h-[40%] w-[40%] max-h-12 max-w-12" strokeWidth={1.4} />
     </div>
   );
 }
@@ -481,12 +520,12 @@ export function Stepper({
   label?: string;
 }) {
   return (
-    <div className="inline-flex items-center rounded-lg border border-cream-300 bg-white shadow-[0_1px_2px_rgb(28_25_23/0.04)]" aria-label={label}>
-      <button type="button" className="h-10 w-10 flex items-center justify-center text-choco-700 hover:bg-cream-50 rounded-l-lg disabled:opacity-30" disabled={value - step < min} onClick={() => onChange(Math.max(min, +(value - step).toFixed(3)))} aria-label="Menos">
+    <div className="inline-flex items-center rounded-xl border border-cream-300 bg-white shadow-[0_1px_2px_rgb(42_29_24/0.04)]" aria-label={label}>
+      <button type="button" className="h-11 w-11 flex items-center justify-center text-berry-600 hover:bg-berry-50 rounded-l-xl disabled:opacity-30" disabled={value - step < min} onClick={() => onChange(Math.max(min, +(value - step).toFixed(3)))} aria-label="Menos">
         <Minus size={16} />
       </button>
       <input
-        className="w-12 text-center font-medium tabular-nums bg-transparent outline-none border-x border-cream-200 h-10"
+        className="w-12 text-center font-semibold tabular-nums bg-transparent outline-none border-x border-cream-200 h-11"
         inputMode="decimal"
         value={num(value)}
         onChange={(e) => {
@@ -495,7 +534,7 @@ export function Stepper({
         }}
         onFocus={(e) => e.target.select()}
       />
-      <button type="button" className="h-10 w-10 flex items-center justify-center text-choco-700 hover:bg-cream-50 rounded-r-lg" onClick={() => onChange(+(value + step).toFixed(3))} aria-label="Más">
+      <button type="button" className="h-11 w-11 flex items-center justify-center text-berry-600 hover:bg-berry-50 rounded-r-xl" onClick={() => onChange(+(value + step).toFixed(3))} aria-label="Más">
         <Plus size={16} />
       </button>
     </div>
@@ -515,15 +554,15 @@ export function Chip({
   className?: string;
   tone?: 'berry' | 'red';
 }) {
-  const on = tone === 'red' ? 'bg-red-50 text-red-800 border-red-300' : 'bg-choco-900 text-white border-choco-900';
+  const on = tone === 'red' ? 'bg-red-50 text-red-800 border-red-300' : 'bg-choco-900 text-white border-choco-900 shadow-[0_4px_12px_-4px_rgb(42_29_24/0.5)]';
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-lg border px-3 h-9 text-[13px] font-medium whitespace-nowrap transition shrink-0',
-        active ? on : 'bg-white text-choco-700 border-cream-300 hover:bg-cream-50',
+        'inline-flex items-center gap-1.5 rounded-full border px-3.5 h-9 text-[13px] font-medium whitespace-nowrap transition shrink-0',
+        active ? on : 'bg-white text-choco-700 border-cream-300 hover:border-choco-400/60',
         className,
       )}
     >
@@ -579,7 +618,7 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={cx('relative h-6 w-11 rounded-full transition shrink-0 mt-0.5', checked ? 'bg-choco-900' : 'bg-cream-300')}
+        className={cx('relative h-6 w-11 rounded-full transition shrink-0 mt-0.5', checked ? 'bg-berry-500' : 'bg-cream-300')}
       >
         <span className={cx('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', checked ? 'left-[22px]' : 'left-0.5')} />
       </button>
@@ -599,7 +638,7 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={cx('flex rounded-lg bg-cream-200/70 p-0.5 gap-0.5', className)} role="tablist">
+    <div className={cx('flex rounded-xl bg-cream-200/70 p-1 gap-1', className)} role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
@@ -608,8 +647,8 @@ export function Segmented<T extends string>({
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
           className={cx(
-            'flex-1 h-8 rounded-md text-[13px] font-medium transition px-2 whitespace-nowrap',
-            value === o.value ? 'bg-white text-choco-900 shadow-[0_1px_2px_rgb(28_25_23/0.1)]' : 'text-choco-500 hover:text-choco-800',
+            'flex-1 h-9 rounded-lg text-[13px] font-medium transition px-2 whitespace-nowrap',
+            value === o.value ? 'bg-white text-choco-900 shadow-[0_1px_3px_rgb(42_29_24/0.12)]' : 'text-choco-500 hover:text-choco-800',
           )}
         >
           {o.label}
@@ -668,21 +707,22 @@ export function Sheet({
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-choco-900/30 backdrop-blur-[2px] anim-fade" onClick={onClose} />
+      <div className="absolute inset-0 bg-choco-900/40 backdrop-blur-[3px] anim-fade" onClick={onClose} />
       <div
         className={cx(
-          'relative anim-sheet bg-white w-full rounded-t-2xl sm:rounded-xl max-h-[92dvh] flex flex-col shadow-2xl border border-cream-200',
+          'relative anim-sheet bg-cream-50 w-full rounded-t-[28px] sm:rounded-3xl max-h-[92dvh] flex flex-col shadow-2xl',
           wide ? 'sm:max-w-2xl' : 'sm:max-w-lg',
         )}
       >
-        <div className="flex items-center gap-2 px-5 pt-4 pb-3">
-          <div className="flex-1 text-[17px] font-semibold text-choco-900">{title}</div>
+        <div className="sm:hidden mx-auto mt-2.5 h-1 w-10 rounded-full bg-cream-300" />
+        <div className="flex items-center gap-2 px-5 pt-3 sm:pt-5 pb-3">
+          <div className="flex-1 font-display text-[22px] font-medium text-choco-900">{title}</div>
           <IconButton label="Cerrar" onClick={onClose} className="-mr-2">
             <X size={18} />
           </IconButton>
         </div>
         <div className="overflow-y-auto px-5 pb-5 flex-1">{children}</div>
-        {footer && <div className="border-t border-cream-200 px-5 py-3 pb-safe bg-cream-50 sm:rounded-b-xl">{footer}</div>}
+        {footer && <div className="border-t border-cream-200 px-5 py-3 pb-safe bg-white sm:rounded-b-3xl">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -750,7 +790,7 @@ export function LinkRow({ to, children, right }: { to: string; children: ReactNo
 /** Botón flotante (+) en móvil. */
 export function Fab({ to, label, onClick }: { to?: string; label: string; onClick?: () => void }) {
   const cls =
-    'lg:hidden fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 h-14 w-14 rounded-xl bg-choco-900 text-white flex items-center justify-center shadow-[var(--shadow-float)] active:scale-95 transition';
+    'lg:hidden fixed right-5 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-40 h-14 w-14 rounded-2xl bg-gradient-to-br from-berry-500 to-berry-700 text-white flex items-center justify-center shadow-[0_12px_28px_-8px_rgb(156_51_80/0.7)] active:scale-95 transition';
   if (to)
     return (
       <Link to={to} className={cls} aria-label={label} title={label}>

@@ -230,8 +230,8 @@ export function Shopping() {
       )}
 
       {(checked.length > 0 || d.extras.some((e) => e.done)) && (
-        <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:bottom-0 lg:left-64 z-30 bg-white/95 backdrop-blur border-t border-cream-200">
-          <div className="mx-auto max-w-5xl px-4 lg:px-8 py-3">
+        <div className="action-bar">
+          <div className="mx-auto max-w-5xl px-3.5 lg:px-10 py-2.5 lg:py-3">
             {permissions.inventory ? (
               <Button block size="lg" variant="success" disabled={!checked.length} onClick={() => setCheckout(true)}>
                 Registrar compra ({checked.length} {checked.length === 1 ? 'producto' : 'productos'})

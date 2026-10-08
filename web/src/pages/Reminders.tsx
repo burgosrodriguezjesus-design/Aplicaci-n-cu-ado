@@ -4,7 +4,7 @@ import { Bell, Check, ChefHat, ChevronRight, CircleCheck, CircleHelp, FileText, 
 import { api, useAction, useApi } from '../lib/api';
 import { relDay, today } from '../lib/format';
 import type { Reminder } from '../lib/types';
-import { Button, Card, cx, Empty, ErrorBox, Input, Loading, PageHeader, Section } from '../components/ui';
+import { Button, Card, Empty, ErrorBox, Input, Loading, PageHeader, Section, TintIcon, cx } from '../components/ui';
 
 const ICON: Record<string, LucideIcon> = {
   start: ChefHat,
@@ -19,13 +19,13 @@ const ICON: Record<string, LucideIcon> = {
   manual: Pin,
 };
 
-const SEV_ICON = { urgent: 'text-red-600', warning: 'text-amber-600', info: 'text-choco-400' };
+const SEV_TINT = { urgent: 'rose', warning: 'caramel', info: 'cocoa' } as const;
 
 export function ReminderRow({ r, onDone }: { r: Reminder; onDone?: () => void }) {
   const Icon = ICON[r.type] ?? Bell;
   const body = (
     <>
-      <Icon size={18} strokeWidth={1.75} className={cx('shrink-0', SEV_ICON[r.severity])} />
+      <TintIcon icon={Icon} tint={SEV_TINT[r.severity]} size="sm" />
       <span className="flex-1 text-sm leading-snug text-choco-800">{r.text.replace(/^⚠️ /, '')}</span>
     </>
   );

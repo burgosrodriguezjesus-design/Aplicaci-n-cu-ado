@@ -207,7 +207,7 @@ export function ProductForm() {
       </Card>
 
       <Card className="p-4 space-y-4">
-        <h2 className="font-semibold text-base">Precio y tamaños</h2>
+        <h2 className="font-display text-[19px] text-choco-900">Precio y tamaños</h2>
         <Segmented
           value={f.pricing}
           onChange={(pricing) => setF({ ...f, pricing })}
@@ -246,7 +246,7 @@ export function ProductForm() {
       </Card>
 
       <Card className="p-4 space-y-4">
-        <h2 className="font-semibold text-base">Opciones para el cliente</h2>
+        <h2 className="font-display text-[19px] text-choco-900">Opciones para el cliente</h2>
         <TagInput label="Sabores" value={f.flavors} onChange={(flavors) => setF({ ...f, flavors })} />
         <TagInput label="Rellenos" value={f.fillings} onChange={(fillings) => setF({ ...f, fillings })} />
         <TagInput label="Coberturas" value={f.coverings} onChange={(coverings) => setF({ ...f, coverings })} />
@@ -269,7 +269,7 @@ export function ProductForm() {
 
       <Card className="p-4 space-y-4">
         <div>
-          <h2 className="font-semibold text-base">Composición (escandallo)</h2>
+          <h2 className="font-display text-[19px] text-choco-900">Composición (escandallo)</h2>
           <p className="text-sm text-choco-500">
             Recetas que lleva (se ajustan solas a las raciones) y envases o decoración. Con esto se calculan el coste, los ingredientes de cada pedido y la lista de la compra.
           </p>
@@ -341,7 +341,7 @@ export function ProductForm() {
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h2 className="font-semibold text-base">Fases de producción</h2>
+        <h2 className="font-display text-[19px] text-choco-900">Fases de producción</h2>
         <p className="text-sm text-choco-500">Tareas que aparecerán en Producción para este producto (además de «Entregar»).</p>
         <div className="flex flex-wrap gap-2">
           {STAGES.filter((s) => s !== 'entregar').map((s) => (
@@ -358,8 +358,8 @@ export function ProductForm() {
         </Button>
       )}
 
-      <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:bottom-0 lg:left-64 z-30 bg-white/95 backdrop-blur border-t border-cream-200">
-        <div className="mx-auto max-w-5xl px-4 lg:px-8 py-3">
+      <div className="action-bar">
+        <div className="mx-auto max-w-5xl px-3.5 lg:px-10 py-2.5 lg:py-3">
           <Button block size="lg" loading={save.isPending} disabled={!f.name.trim()} onClick={() => save.mutate()}>
             Guardar producto
           </Button>

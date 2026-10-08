@@ -146,7 +146,7 @@ export function RecipeForm() {
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h2 className="font-semibold text-base">Ingredientes</h2>
+        <h2 className="font-display text-[19px] text-choco-900">Ingredientes</h2>
         {f.ingredients.map((ing) => {
           const it = ing.item_id ? itemMap.get(ing.item_id) : undefined;
           const units = it ? compatibleUnits(it.unit) : (['g', 'kg', 'ml', 'l', 'ud'] as Unit[]);
@@ -182,7 +182,7 @@ export function RecipeForm() {
       </Card>
 
       <Card className="p-4 space-y-3">
-        <h2 className="font-semibold text-base">Paso a paso</h2>
+        <h2 className="font-display text-[19px] text-choco-900">Paso a paso</h2>
         {f.steps.map((s, i) => (
           <div key={i} className="flex gap-2 items-start">
             <span className="h-8 w-8 mt-2 shrink-0 rounded-full bg-cream-100 border border-cream-200 text-choco-700 text-sm font-medium flex items-center justify-center">{i + 1}</span>
@@ -214,8 +214,8 @@ export function RecipeForm() {
         </Field>
       </Card>
 
-      <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:bottom-0 lg:left-64 z-30 bg-white/95 backdrop-blur border-t border-cream-200">
-        <div className="mx-auto max-w-5xl px-4 lg:px-8 py-3">
+      <div className="action-bar">
+        <div className="mx-auto max-w-5xl px-3.5 lg:px-10 py-2.5 lg:py-3">
           <Button block size="lg" loading={save.isPending} disabled={!f.name.trim() || !f.servings} onClick={() => save.mutate()}>
             Guardar receta
           </Button>

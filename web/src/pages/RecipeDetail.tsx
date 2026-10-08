@@ -131,7 +131,7 @@ export function RecipeDetail() {
 
         <div className="space-y-5">
           <Card className="p-4 space-y-3">
-            <div className="font-semibold text-base">¿Para cuántas personas?</div>
+            <div className="font-display text-[19px] text-choco-900">¿Para cuántas personas?</div>
             <div className="flex items-center gap-3">
               <NumberInput value={target} onChange={(v) => setServings(v && v > 0 ? v : null)} suffix="raciones" className="w-48" integer />
               {factor !== 1 && <Badge tone="berry">× {num(factor, 2)}</Badge>}

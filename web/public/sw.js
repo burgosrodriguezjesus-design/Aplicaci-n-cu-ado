@@ -1,6 +1,6 @@
 // Service worker mínimo: guarda la aplicación para que abra rápido y se pueda instalar.
 // Los datos (/api) siempre se piden al servidor.
-const CACHE = 'obrador-v2';
+const CACHE = 'obrador-v3';
 const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
 
 self.addEventListener('install', (e) => {

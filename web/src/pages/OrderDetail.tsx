@@ -1,22 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import {
-  CalendarDays,
-  Check,
-  ChevronRight,
-  Copy,
-  MapPin,
-  MessageCircle,
-  Pencil,
-  Phone,
-  Printer,
-  Store,
-  Trash2,
-  TriangleAlert,
-  Truck,
-  Undo2,
-  X,
-} from 'lucide-react';
+import { CakeSlice, CalendarDays, Check, ChevronRight, Copy, MapPin, MessageCircle, Pencil, Phone, Printer, Store, Trash2, TriangleAlert, Truck, Undo2, X } from 'lucide-react';
 import {
   ALLERGEN_LABELS,
   PAYMENT_KIND_LABELS,
@@ -36,7 +20,7 @@ import { dateLong, money, num, qty, relDay, today } from '../lib/format';
 import type { Order } from '../lib/types';
 import { PhotoViewer } from '../components/PhotoPicker';
 import { imageUrl } from '../lib/image';
-import { Badge, Button, Card, Chip, Collapsible, ErrorBox, Field, Input, Loading, NumberInput, PageHeader, STATUS_STYLE, Section, Segmented, Sheet, StageIcon, StatusBadge, Thumb, cx, useConfirm } from '../components/ui';
+import { Badge, Button, Card, Chip, Collapsible, ErrorBox, Field, Input, Loading, NumberInput, PageHeader, STATUS_STYLE, Section, Segmented, Sheet, StageIcon, StatusBadge, Thumb, TintIcon, cx, useConfirm } from '../components/ui';
 
 const FLOW: OrderStatus[] = ['nuevo', 'confirmado', 'pendiente', 'en_preparacion', 'terminado', 'entregado'];
 
@@ -178,15 +162,15 @@ export function OrderDetail() {
             </Button>
           )}
           {o.status !== 'cancelado' && o.status !== 'entregado' && (
-            <Button size="lg" variant="ghost" onClick={() => changeStatus('cancelado')} icon={<X size={18} />}>
-              Cancelar
+            <Button size="lg" variant="ghost" onClick={() => changeStatus('cancelado')} icon={<X size={18} />} aria-label="Cancelar pedido" title="Cancelar pedido">
+              <span className="hidden sm:inline">Cancelar</span>
             </Button>
           )}
         </div>
       </Card>
 
       {o.allergen_warnings.length > 0 && (
-        <div className="rounded-xl bg-red-600 text-white p-4 font-medium flex gap-3">
+        <div className="rounded-2xl bg-gradient-to-br from-red-600 to-red-700 text-white p-4 font-medium flex gap-3 shadow-[0_10px_24px_-12px_rgb(185_28_28/0.7)]">
           <TriangleAlert className="shrink-0" />
           <div>
             {o.allergen_warnings.map((w) => (
@@ -200,11 +184,9 @@ export function OrderDetail() {
         {/* Entrega */}
         <Card className="p-4 space-y-3">
           <div className="flex items-start gap-3">
-            <div className="h-11 w-11 rounded-lg border border-cream-200 bg-cream-50 text-choco-700 flex items-center justify-center shrink-0">
-              <CalendarDays />
-            </div>
+            <TintIcon icon={CalendarDays} tint={late ? 'rose' : 'caramel'} size="lg" />
             <div>
-              <div className={cx('text-lg font-semibold first-letter:uppercase', late && 'text-red-600')}>
+              <div className={cx('font-display text-[22px] leading-tight first-letter:uppercase', late && 'text-red-700')}>
                 {relDay(o.delivery_date)} {o.delivery_time ? `· ${o.delivery_time}` : ''}
               </div>
               <div className="text-choco-500 first-letter:uppercase">{dateLong(o.delivery_date)}</div>
@@ -226,16 +208,16 @@ export function OrderDetail() {
         {/* Cliente */}
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-full bg-cream-100 border border-cream-200 text-choco-700 text-base font-medium flex items-center justify-center shrink-0">
+            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-berry-100 to-caramel-100 ring-1 ring-inset ring-berry-100 text-berry-700 font-display text-[20px] flex items-center justify-center shrink-0">
               {o.customer_name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
               {o.customer_id ? (
-                <Link to={`/clientes/${o.customer_id}`} className="text-lg font-semibold hover:underline">
+                <Link to={`/clientes/${o.customer_id}`} className="font-display text-[22px] leading-tight hover:text-berry-700">
                   {o.customer_name}
                 </Link>
               ) : (
-                <div className="text-lg font-semibold">{o.customer_name}</div>
+                <div className="font-display text-[22px] leading-tight">{o.customer_name}</div>
               )}
               <div className="text-choco-500">{o.customer_phone || 'Sin teléfono'}</div>
             </div>
@@ -263,7 +245,7 @@ export function OrderDetail() {
           {o.items.map((l) => (
             <Card key={l.id} className="p-4">
               <div className="flex gap-3">
-                <Thumb photoId={l.product_photo_id} className="h-16 w-16 shrink-0 text-sm" />
+                <Thumb photoId={l.product_photo_id} icon={CakeSlice} className="h-16 w-16 shrink-0 text-sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="text-base font-semibold leading-tight">
@@ -284,9 +266,9 @@ export function OrderDetail() {
                 <Detail label="Notas" value={l.notes} />
               </dl>
               {l.custom_text && (
-                <div className="mt-3 rounded-xl bg-caramel-100 border border-caramel-500/30 px-3 py-2">
-                  <div className="text-xs font-semibold uppercase text-caramel-700">Texto en la tarta</div>
-                  <div className="text-base font-semibold">«{l.custom_text}»</div>
+                <div className="mt-3 rounded-xl bg-caramel-50 ring-1 ring-inset ring-caramel-100 px-3.5 py-2.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-caramel-700">Texto en la tarta</div>
+                  <div className="font-display text-[20px] text-choco-900 mt-0.5">«{l.custom_text}»</div>
                 </div>
               )}
               {l.contains && l.contains.length > 0 && (
@@ -494,9 +476,9 @@ function Detail({ label, value }: { label: string; value: string | null | undefi
 
 function MoneyBox({ label, value, tone }: { label: string; value: number; tone?: 'green' | 'amber' }) {
   return (
-    <div className="rounded-lg py-2 border border-cream-200 bg-cream-50">
-      <div className="text-xs font-medium text-choco-500">{label}</div>
-      <div className={cx('text-base font-semibold tabular-nums', tone === 'amber' && 'text-amber-700', tone === 'green' && 'text-emerald-700')}>{money(value)}</div>
+    <div className="rounded-xl py-2.5 bg-cream-50 ring-1 ring-inset ring-cream-200">
+      <div className="text-xs text-choco-500">{label}</div>
+      <div className={cx('font-display text-[20px] tabular-nums mt-0.5', tone === 'amber' ? 'text-caramel-700' : tone === 'green' ? 'text-sage-700' : 'text-choco-900')}>{money(value)}</div>
     </div>
   );
 }

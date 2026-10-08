@@ -458,8 +458,8 @@ export function OrderForm({ mode }: { mode: Mode }) {
         </Collapsible>
 
         {/* Barra fija de guardar */}
-        <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:bottom-0 lg:left-64 z-30 bg-white/95 backdrop-blur border-t border-cream-200 no-print">
-          <div className="mx-auto max-w-5xl px-4 lg:px-8 py-3 flex items-center gap-3">
+        <div className="action-bar no-print">
+          <div className="mx-auto max-w-5xl px-3.5 lg:px-10 py-2.5 lg:py-3 flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <div className="text-xs font-medium text-choco-500">Total</div>
               <div className="text-lg font-semibold text-choco-900 tabular-nums leading-tight">{money(total)}</div>
@@ -487,8 +487,8 @@ export function OrderForm({ mode }: { mode: Mode }) {
 function FormSection({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <Card className="p-4 lg:p-5">
-      <h2 className="flex items-center gap-2.5 font-semibold text-[15px] text-choco-900 mb-4">
-        <span className="h-6 w-6 rounded-md border border-cream-200 bg-cream-50 text-choco-500 text-xs font-medium flex items-center justify-center tabular-nums">{n}</span>
+      <h2 className="flex items-center gap-3 font-display text-[20px] text-choco-900 mb-4">
+        <span className="h-7 w-7 rounded-full bg-berry-50 ring-1 ring-inset ring-berry-100 text-berry-700 font-sans text-[13px] font-semibold flex items-center justify-center tabular-nums">{n}</span>
         {title}
       </h2>
       {children}
