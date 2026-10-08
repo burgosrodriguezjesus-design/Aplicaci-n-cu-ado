@@ -220,7 +220,7 @@ function MonthCard({ m }: { m: NonNullable<DashboardData['money']> }) {
               <ColumnChart
                 data={data}
                 series={[{ name: 'Facturado', color: SERIES.revenue }]}
-                colorFor={(_, __, i) => (i === current ? SERIES.revenue : '#e6c3cd')}
+                colorFor={(_, __, i) => (i === current ? SERIES.revenue : '#ead3ca')}
                 height={150}
               />
             </div>

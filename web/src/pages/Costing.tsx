@@ -39,9 +39,9 @@ interface Breakdown {
 
 // Partes del coste (barra apilada): colores categóricos en orden fijo, validados para daltonismo; siempre con leyenda e importes.
 const PARTS = [
-  { key: 'ingredients', label: 'Ingredientes', color: '#b4405f' },
-  { key: 'materials', label: 'Envases y materiales', color: '#c27a1f' },
-  { key: 'labor', label: 'Mano de obra', color: '#7d5ba6' },
+  { key: 'ingredients', label: 'Ingredientes', color: '#b06650' },
+  { key: 'materials', label: 'Envases y materiales', color: '#7d5ba6' },
+  { key: 'labor', label: 'Mano de obra', color: '#b08a1a' },
   { key: 'other', label: 'Otros costes', color: '#3d8a5c' },
   { key: 'overhead', label: 'Gastos generales', color: '#2f74b5' },
 ] as const;

@@ -3,9 +3,9 @@ import { money } from '../lib/format';
 import { cx } from './ui';
 
 // Colores de gráfica de la marca, validados (contraste 3:1 y daltonismo) sobre fondo blanco:
-// ingresos (palo de rosa) frente a gastos (caramelo); beneficio verde y pérdidas en rojo
+// ingresos (terracota del logo) frente a gastos (ciruela); beneficio verde y pérdidas en rojo
 // (además se distinguen por quedar por encima o por debajo de cero).
-export const SERIES = { revenue: '#b4405f', expenses: '#c27a1f', profit: '#3d8a5c', loss: '#d64545' };
+export const SERIES = { revenue: '#b06650', expenses: '#7d5ba6', profit: '#3d8a5c', loss: '#d64545' };
 const GRID = '#f1ebe3';
 const AXIS = '#ddd0bf';
 const MUTED = '#8a7668';

@@ -1,4 +1,8 @@
-# 🧁 Obrador — gestión para tu pastelería
+# Repostería Madre Mía
+
+<img src="web/public/logo-256.png" alt="Logo de Repostería Madre Mía" width="128" />
+
+Aplicación de gestión de **Repostería Madre Mía**.
 
 Aplicación completa para llevar una pequeña repostería o pastelería desde el móvil
 (y también desde el ordenador): **pedidos, calendario, producción diaria, recetas,

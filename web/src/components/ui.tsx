@@ -31,7 +31,7 @@ const variants: Record<Variant, string> = {
   primary:
     'bg-gradient-to-b from-choco-800 to-choco-900 text-white hover:from-choco-700 hover:to-choco-800 shadow-[0_1px_0_rgb(255_255_255/0.08)_inset,0_6px_16px_-6px_rgb(42_29_24/0.55)]',
   accent:
-    'bg-gradient-to-b from-berry-500 to-berry-600 text-white hover:from-berry-600 hover:to-berry-700 shadow-[0_1px_0_rgb(255_255_255/0.15)_inset,0_6px_16px_-6px_rgb(156_51_80/0.6)]',
+    'bg-gradient-to-b from-berry-500 to-berry-600 text-white hover:from-berry-600 hover:to-berry-700 shadow-[0_1px_0_rgb(255_255_255/0.15)_inset,0_6px_16px_-6px_rgb(149_83_63/0.6)]',
   secondary: 'bg-white text-choco-800 border border-cream-300 hover:border-choco-400/60 hover:bg-cream-50 shadow-[0_1px_2px_rgb(42_29_24/0.04)]',
   outline: 'bg-white text-choco-800 border border-cream-300 hover:border-choco-400/60 hover:bg-cream-50 shadow-[0_1px_2px_rgb(42_29_24/0.04)]',
   ghost: 'bg-transparent text-choco-700 hover:bg-cream-200/70',
@@ -790,7 +790,7 @@ export function LinkRow({ to, children, right }: { to: string; children: ReactNo
 /** Botón flotante (+) en móvil. */
 export function Fab({ to, label, onClick }: { to?: string; label: string; onClick?: () => void }) {
   const cls =
-    'lg:hidden fixed right-5 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-40 h-14 w-14 rounded-2xl bg-gradient-to-br from-berry-500 to-berry-700 text-white flex items-center justify-center shadow-[0_12px_28px_-8px_rgb(156_51_80/0.7)] active:scale-95 transition';
+    'lg:hidden fixed right-5 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-40 h-14 w-14 rounded-2xl bg-gradient-to-br from-berry-500 to-berry-700 text-white flex items-center justify-center shadow-[0_12px_28px_-8px_rgb(149_83_63/0.7)] active:scale-95 transition';
   if (to)
     return (
       <Link to={to} className={cls} aria-label={label} title={label}>

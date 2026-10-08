@@ -4,11 +4,11 @@
   --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
 
-  /* Identidad "obrador": papel crema, espresso, palo de rosa, caramelo, salvia y ciruela. */
-  --color-cream-50: #fffdf9;
-  --color-cream-100: #f8f3ec;
-  --color-cream-200: #ece3d7;
-  --color-cream-300: #ddd0bf;
+  /* Identidad de Repostería Madre Mía (sacada del logo): crema, tinta espresso y terracota; caramelo, salvia y ciruela de apoyo. */
+  --color-cream-50: #fffdfb;
+  --color-cream-100: #f9f4f0;
+  --color-cream-200: #ede4dc;
+  --color-cream-300: #dfd2c6;
 
   --color-choco-900: #2a1d18;
   --color-choco-800: #3a2a23;
@@ -16,12 +16,12 @@
   --color-choco-500: #8a7668;
   --color-choco-400: #b0a093;
 
-  --color-berry-50: #fcf2f4;
-  --color-berry-100: #f8e0e6;
-  --color-berry-200: #eebccb;
-  --color-berry-500: #b4405f;
-  --color-berry-600: #9c3350;
-  --color-berry-700: #7e2941;
+  --color-berry-50: #fbf4f0;
+  --color-berry-100: #f4e2d9;
+  --color-berry-200: #e8c4b6;
+  --color-berry-500: #b06650;
+  --color-berry-600: #95533f;
+  --color-berry-700: #77412f;
 
   --color-caramel-50: #fdf6ec;
   --color-caramel-100: #f9e9d2;
@@ -111,7 +111,7 @@
   /* Cabecera oscura con brillos cálidos (inicio, bienvenida) */
   .hero {
     background:
-      radial-gradient(120% 90% at 100% 0%, rgb(180 64 95 / 0.55) 0%, transparent 55%),
+      radial-gradient(120% 90% at 100% 0%, rgb(184 116 96 / 0.6) 0%, transparent 55%),
       radial-gradient(90% 80% at 0% 100%, rgb(194 122 31 / 0.35) 0%, transparent 60%),
       linear-gradient(160deg, #3b2820 0%, #2a1d18 55%, #22170f 100%);
   }

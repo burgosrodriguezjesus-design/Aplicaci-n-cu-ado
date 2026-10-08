@@ -1,7 +1,7 @@
 // Service worker mínimo: guarda la aplicación para que abra rápido y se pueda instalar.
 // Los datos (/api) siempre se piden al servidor.
-const CACHE = 'obrador-v3';
-const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
+const CACHE = 'madremia-v1';
+const SHELL = ['/', '/manifest.webmanifest', '/logo-256.png', '/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

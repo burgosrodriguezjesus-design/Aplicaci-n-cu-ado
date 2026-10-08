@@ -1,18 +1,17 @@
 {
-  "name": "Obrador · Gestión de pastelería",
-  "short_name": "Obrador",
-  "description": "Pedidos, producción, recetas, inventario y finanzas de tu pastelería.",
+  "name": "Repostería Madre Mía",
+  "short_name": "Repostería Madre Mía",
+  "description": "Pedidos, producción, recetas, inventario y finanzas de Repostería Madre Mía.",
   "lang": "es",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f8f3ec",
-  "theme_color": "#2a1d18",
+  "background_color": "#f9f4f0",
+  "theme_color": "#f9f4f0",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

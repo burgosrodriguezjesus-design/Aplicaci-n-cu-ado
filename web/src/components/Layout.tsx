@@ -74,12 +74,9 @@ export function Layout() {
       {/* Barra lateral (ordenador) */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col hero text-cream-100 z-30">
         <div className="absolute inset-0 hero-dots pointer-events-none" />
-        <Link to="/" className="relative flex items-center gap-3 px-5 h-20">
-          <Logo name={businessName} />
-          <span className="min-w-0">
-            <span className="block font-display text-[17px] font-medium text-white truncate leading-tight">{businessName}</span>
-            <span className="block text-[11px] uppercase tracking-[0.14em] text-cream-100/50">Obrador</span>
-          </span>
+        <Link to="/" className="relative flex flex-col items-center text-center gap-3 px-5 pt-7 pb-5">
+          <Logo className="h-[92px] w-[92px] ring-4 ring-white/10 shadow-[0_14px_32px_-10px_rgb(0_0_0/0.7)]" />
+          <span className="font-display text-[18px] font-medium text-white leading-tight">{businessName}</span>
         </Link>
         <button
           type="button"
@@ -122,7 +119,7 @@ export function Layout() {
       <header className="lg:hidden sticky top-0 z-30 bg-cream-100/85 backdrop-blur-md border-b border-cream-200/70 pt-safe no-print">
         <div className="flex items-center gap-1 h-14 px-4">
           <Link to="/" className="flex items-center gap-2.5 flex-1 min-w-0">
-            <Logo name={businessName} />
+            <Logo />
             <span className="font-display text-[18px] font-medium text-choco-900 truncate">{businessName}</span>
           </Link>
           <HeaderButton label="Buscar" onClick={() => setSearchOpen(true)}>
@@ -188,18 +185,15 @@ function HeaderButton({ label, onClick, children }: { label: string; onClick: ()
   );
 }
 
-/** Monograma con la inicial del negocio, en serif sobre palo de rosa. */
-export function Logo({ name, className }: { name: string; className?: string }) {
-  const initial = (name.trim().replace(/^(la|el|los|las)\s+/i, '').charAt(0) || 'O').toUpperCase();
+/** Logo de Repostería Madre Mía. */
+export function Logo({ className }: { className?: string }) {
   return (
-    <span
-      className={cx(
-        'h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-berry-500 to-berry-700 text-white font-display text-[19px] font-medium flex items-center justify-center shadow-[0_1px_0_rgb(255_255_255/0.2)_inset,0_6px_14px_-6px_rgb(126_41_65/0.8)]',
-        className,
-      )}
-      aria-hidden
-    >
-      {initial}
-    </span>
+    <img
+      src="/logo-256.png"
+      alt="Repostería Madre Mía"
+      width={40}
+      height={40}
+      className={cx('h-10 w-10 shrink-0 rounded-full ring-1 ring-black/5 shadow-[0_4px_12px_-4px_rgb(42_29_24/0.35)]', className)}
+    />
   );
 }
